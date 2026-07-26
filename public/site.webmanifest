@@ -1,0 +1,16 @@
+{
+  "name": "Luthra Travels - Premier Taxi & Chauffeur Mobility",
+  "short_name": "Luthra Travels",
+  "description": "Executive Chauffeur Rentals, Airport Transfers, Outstation Taxis, and Corporate Mobility across Delhi NCR & North India.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
