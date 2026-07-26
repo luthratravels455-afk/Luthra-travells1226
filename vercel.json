@@ -1,0 +1,67 @@
+{
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://fcfdmayqfywyxlyweypm.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_9cQc1SkdTkYmBzhFPcMKhg_X_i24koG",
+    "SUPABASE_SERVICE_ROLE_KEY": "sb_secret_exLXnODj58Ovz_LObvRlRQ_KNtt8mAn",
+    "VITE_SUPABASE_URL": "https://fcfdmayqfywyxlyweypm.supabase.co",
+    "VITE_SUPABASE_ANON_KEY": "sb_publishable_9cQc1SkdTkYmBzhFPcMKhg_X_i24koG",
+    "VITE_GOOGLE_CLIENT_ID": "1065078894672-rmp5kp8vfjns5rn9kp5psfp16g691043.apps.googleusercontent.com",
+    "VITE_GOOGLE_AUTH_PROXY": "https://designarena.ai/auth/google/callback",
+    "FULLSTACK_PROJECT_REF": "fcfdmayqfywyxlyweypm",
+    "FULLSTACK_RESTORE_API_URL": "https://designarena.ai/api/fullstack-restore"
+  },
+  "rewrites": [
+    {
+      "source": "/api/blogs",
+      "destination": "/api/content?type=blogs"
+    },
+    {
+      "source": "/api/gallery",
+      "destination": "/api/content?type=gallery"
+    },
+    {
+      "source": "/api/faqs",
+      "destination": "/api/content?type=faqs"
+    },
+    {
+      "source": "/api/routes",
+      "destination": "/api/content?type=routes"
+    },
+    {
+      "source": "/api/services",
+      "destination": "/api/content?type=services"
+    },
+    {
+      "source": "/api/testimonials",
+      "destination": "/api/content?type=testimonials"
+    },
+    {
+      "source": "/api/contacts",
+      "destination": "/api/admin?type=contacts"
+    },
+    {
+      "source": "/api/customers",
+      "destination": "/api/admin?type=customers"
+    },
+    {
+      "source": "/api/drivers",
+      "destination": "/api/admin?type=drivers"
+    },
+    {
+      "source": "/api/invoices",
+      "destination": "/api/admin?type=invoices"
+    },
+    {
+      "source": "/api/security",
+      "destination": "/api/admin?type=security"
+    },
+    {
+      "source": "/api/stats",
+      "destination": "/api/system?action=stats"
+    },
+    {
+      "source": "/api/upload",
+      "destination": "/api/media"
+    }
+  ]
+}
