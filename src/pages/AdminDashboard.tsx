@@ -8,6 +8,9 @@ import { routesService } from '../services/routesService';
 import { blogService } from '../services/blogService';
 import { cmsService } from '../services/cmsService';
 import { Button } from '../components/ui/Button';
+import { ImageUploader } from '../components/admin/ImageUploader';
+
+const ImageUploadInput = ImageUploader;
 import {
   Booking,
   FleetVehicle,
@@ -857,9 +860,13 @@ export const AdminDashboard: React.FC = () => {
                     <label className="text-zinc-300 font-medium block">Luggage Capacity</label>
                     <input type="number" value={editingVehicle.luggage_count || 2} onChange={e => setEditingVehicle({...editingVehicle, luggage_count: parseInt(e.target.value, 10)})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
                   </div>
-                  <div>
-                    <label className="text-zinc-300 font-medium block">Image URL</label>
-                    <input type="text" value={editingVehicle.image_url || ''} onChange={e => setEditingVehicle({...editingVehicle, image_url: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
+                  <div className="sm:col-span-3">
+                    <ImageUploadInput
+                      label="Vehicle Image (URL or Upload)"
+                      value={editingVehicle.image_url || ''}
+                      onChange={(url) => setEditingVehicle({ ...editingVehicle, image_url: url })}
+                      category="Fleet"
+                    />
                   </div>
                 </div>
                 <div className="flex justify-end gap-2 pt-2 border-t border-zinc-800">
@@ -1009,9 +1016,13 @@ export const AdminDashboard: React.FC = () => {
                     <label className="text-zinc-300 font-medium block">Title *</label>
                     <input type="text" required value={editingService.title || ''} onChange={e => setEditingService({...editingService, title: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
                   </div>
-                  <div>
-                    <label className="text-zinc-300 font-medium block">Cover Image URL</label>
-                    <input type="text" value={editingService.cover_image || ''} onChange={e => setEditingService({...editingService, cover_image: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
+                  <div className="sm:col-span-2">
+                    <ImageUploadInput
+                      label="Service Cover Image (URL or Upload)"
+                      value={editingService.cover_image || ''}
+                      onChange={(url) => setEditingService({ ...editingService, cover_image: url })}
+                      category="Services"
+                    />
                   </div>
                   <div className="sm:col-span-2">
                     <label className="text-zinc-300 font-medium block">Short Description</label>
@@ -1059,8 +1070,12 @@ export const AdminDashboard: React.FC = () => {
                   <input type="text" required value={editingBlog.title || ''} onChange={e => setEditingBlog({...editingBlog, title: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
                 </div>
                 <div>
-                  <label className="text-zinc-300 font-medium block">Cover Image URL</label>
-                  <input type="text" value={editingBlog.cover_image || ''} onChange={e => setEditingBlog({...editingBlog, cover_image: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
+                  <ImageUploadInput
+                    label="Article Cover Image (URL or Upload)"
+                    value={editingBlog.cover_image || ''}
+                    onChange={(url) => setEditingBlog({ ...editingBlog, cover_image: url })}
+                    category="Blog"
+                  />
                 </div>
                 <div>
                   <label className="text-zinc-300 font-medium block">Excerpt</label>
@@ -1120,6 +1135,14 @@ export const AdminDashboard: React.FC = () => {
                   <div className="sm:col-span-2">
                     <label className="text-zinc-300 font-medium block">Review Comment *</label>
                     <textarea rows={3} required value={editingTestimonial.comment || ''} onChange={e => setEditingTestimonial({...editingTestimonial, comment: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <ImageUploadInput
+                      label="Client Avatar (URL or Upload)"
+                      value={editingTestimonial.avatar_url || ''}
+                      onChange={(url) => setEditingTestimonial({ ...editingTestimonial, avatar_url: url })}
+                      category="Testimonials"
+                    />
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
@@ -1191,10 +1214,18 @@ export const AdminDashboard: React.FC = () => {
         {activeTab === 'gallery' && (
           <div className="space-y-6">
             <h2 className="font-serif text-2xl font-bold text-white">Gallery &amp; Media Library</h2>
-            <form onSubmit={handleAddGalleryItem} className="bg-zinc-900 border border border-zinc-800 p-4 rounded-2xl flex flex-col sm:flex-row gap-3 text-xs">
-              <input type="text" required placeholder="Image Title" value={newGalleryItem.title} onChange={e => setNewGalleryItem({...newGalleryItem, title: e.target.value})} className="bg-zinc-950 border border-zinc-800 rounded p-2 text-white flex-1" />
-              <input type="text" required placeholder="Image URL" value={newGalleryItem.image_url} onChange={e => setNewGalleryItem({...newGalleryItem, image_url: e.target.value})} className="bg-zinc-950 border border-zinc-800 rounded p-2 text-white flex-1" />
-              <Button type="submit" variant="gold" size="sm">Upload Image</Button>
+            <form onSubmit={handleAddGalleryItem} className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input type="text" required placeholder="Image Title (e.g. Innova Crysta Airport Transfer)" value={newGalleryItem.title} onChange={e => setNewGalleryItem({...newGalleryItem, title: e.target.value})} className="bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
+                <input type="text" placeholder="Category (e.g. Fleet / VIP / Outstation)" value={newGalleryItem.category} onChange={e => setNewGalleryItem({...newGalleryItem, category: e.target.value})} className="bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
+              </div>
+              <ImageUploadInput
+                label="Gallery Image (URL or Upload from Device)"
+                value={newGalleryItem.image_url}
+                onChange={(url) => setNewGalleryItem({ ...newGalleryItem, image_url: url })}
+                category={newGalleryItem.category || 'Gallery'}
+              />
+              <Button type="submit" variant="gold" size="sm">Save to Media Library</Button>
             </form>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -1221,6 +1252,12 @@ export const AdminDashboard: React.FC = () => {
                 <label className="text-zinc-300 font-medium block">Hero Subtitle</label>
                 <input type="text" value={settingsForm.hero_subtitle || 'Airport Transfers • Outstation Trips • Local Taxi • Corporate Travel'} onChange={e => setSettingsForm({...settingsForm, hero_subtitle: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white" />
               </div>
+              <ImageUploadInput
+                label="Hero Background Banner Image (URL or Upload)"
+                value={settingsForm.hero_bg_image || ''}
+                onChange={(url) => setSettingsForm({ ...settingsForm, hero_bg_image: url })}
+                category="Homepage"
+              />
               <div>
                 <label className="text-zinc-300 font-medium block">Why Choose Us Section Title</label>
                 <input type="text" value={settingsForm.why_choose_title || 'Why Choose Luthra Travels?'} onChange={e => setSettingsForm({...settingsForm, why_choose_title: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white" />
@@ -1255,6 +1292,20 @@ export const AdminDashboard: React.FC = () => {
                 <label className="text-zinc-300 font-medium block">Primary Email</label>
                 <input type="email" value={settingsForm.email_primary || 'luthratravel455@gmail.com'} onChange={e => setSettingsForm({...settingsForm, email_primary: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white" />
               </div>
+              <div className="sm:col-span-2 space-y-4 pt-2">
+                <ImageUploadInput
+                  label="Company Logo Image (URL or Upload)"
+                  value={settingsForm.logo_url || ''}
+                  onChange={(url) => setSettingsForm({ ...settingsForm, logo_url: url })}
+                  category="Brand"
+                />
+                <ImageUploadInput
+                  label="Favicon Badge Image (URL or Upload)"
+                  value={settingsForm.favicon_url || ''}
+                  onChange={(url) => setSettingsForm({ ...settingsForm, favicon_url: url })}
+                  category="Brand"
+                />
+              </div>
             </div>
             <Button type="submit" variant="gold" size="sm" leftIcon={<Save className="w-4 h-4" />}>Save Business Details</Button>
           </form>
@@ -1273,6 +1324,12 @@ export const AdminDashboard: React.FC = () => {
                 <label className="text-zinc-300 font-medium block">Meta Description</label>
                 <textarea rows={3} value={settingsForm.seo_description || 'Book executive taxi rentals across Delhi NCR, Agra, Jaipur, and Chandigarh.'} onChange={e => setSettingsForm({...settingsForm, seo_description: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white" />
               </div>
+              <ImageUploadInput
+                label="OpenGraph Social Preview Image (URL or Upload)"
+                value={settingsForm.og_image_url || ''}
+                onChange={(url) => setSettingsForm({ ...settingsForm, og_image_url: url })}
+                category="SEO"
+              />
             </div>
             <Button type="submit" variant="gold" size="sm" leftIcon={<Save className="w-4 h-4" />}>Save SEO Configuration</Button>
           </form>

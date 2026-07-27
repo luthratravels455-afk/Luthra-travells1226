@@ -79,7 +79,7 @@ export const MediaLibraryModal: React.FC<MediaLibraryModalProps> = ({
   const loadMedia = async () => {
     setLoading(true);
     try {
-      const items = await mediaService.getAllMedia();
+      const items = await mediaService.getMediaItems();
       if (items && items.length > 0) {
         setMediaList(items);
       } else {
@@ -166,7 +166,7 @@ export const MediaLibraryModal: React.FC<MediaLibraryModalProps> = ({
     if (!window.confirm(`Delete "${item.name}" from Media Library? Warning: If this image is used on a page, it may become unavailable.`)) return;
 
     try {
-      await mediaService.deleteMedia(item.name || item.url);
+      await mediaService.deleteMediaItem(item.name || item.url);
       setMediaList((prev) => prev.filter((m) => m.url !== item.url));
       showToast('Media file deleted from storage.', 'info');
     } catch (err: any) {
