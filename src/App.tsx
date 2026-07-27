@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { CMSProvider } from './contexts/CMSContext';
@@ -53,8 +53,17 @@ export function App() {
                   <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                   <Route path="/terms-conditions" element={<TermsConditions />} />
                   <Route path="/login" element={<Login />} />
+                  <Route path="/admin/login" element={<Login />} />
                   <Route
                     path="/admin"
+                    element={
+                      <ProtectedRoute>
+                        <AdminDashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard"
                     element={
                       <ProtectedRoute>
                         <AdminDashboard />

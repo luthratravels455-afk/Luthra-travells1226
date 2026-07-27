@@ -7,8 +7,6 @@ import { fleetService } from '../services/fleetService';
 import { routesService } from '../services/routesService';
 import { blogService } from '../services/blogService';
 import { cmsService } from '../services/cmsService';
-import { MediaPicker } from '../components/MediaPicker';
-import { MediaLibraryModal } from '../components/MediaLibraryModal';
 import { Button } from '../components/ui/Button';
 import {
   Booking,
@@ -18,86 +16,102 @@ import {
   Testimonial,
   FAQItem,
   GalleryItem,
+  ServiceItem,
   AdminStats,
   SiteSettings,
 } from '../types';
 import {
   LayoutDashboard,
   Calendar,
+  Users,
   Car,
   Compass,
+  Briefcase,
   FileText,
   Star,
   HelpCircle,
   Image as ImageIcon,
+  Home as HomeIcon,
   Settings,
   BarChart3,
   LogOut,
   Plus,
   Trash2,
   Edit3,
-  CheckCircle,
-  Search,
   RefreshCw,
   Download,
   Save,
   ShieldCheck,
   X,
-  Upload,
-  Layers,
+  Phone,
+  Globe,
+  Tag,
+  Bell,
+  Lock,
+  Database,
+  Sliders,
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const { showToast } = useToast();
   const { settings, refreshSettings } = useCMS();
 
-  const [activeTab, setActiveTab] = useState<
-    'dashboard' | 'bookings' | 'fleet' | 'routes' | 'blogs' | 'testimonials' | 'faqs' | 'gallery' | 'media' | 'settings' | 'backup'
-  >('dashboard');
+  type AdminTab =
+    | 'dashboard'
+    | 'bookings'
+    | 'customers'
+    | 'fleet'
+    | 'routes'
+    | 'taxi-packages'
+    | 'services'
+    | 'blogs'
+    | 'testimonials'
+    | 'faqs'
+    | 'gallery'
+    | 'homepage'
+    | 'settings'
+    | 'seo'
+    | 'pricing'
+    | 'notifications'
+    | 'users'
+    | 'backup';
 
-  // CRM Data States
+  const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
+
+  // Data States
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [bookingFilterStatus, setBookingFilterStatus] = useState<string>('ALL');
-  const [bookingSearch, setBookingFilterSearch] = useState<string>('');
+  const [bookingSearch] = useState<string>('');
 
   const [fleetList, setFleetList] = useState<FleetVehicle[]>([]);
   const [routesList, setRoutesList] = useState<PopularRoute[]>([]);
-  const [routeSearch, setRouteSearch] = useState<string>('');
-  const [routeFilterStatus, setRouteFilterStatus] = useState<string>('ALL');
-  const [selectedRouteIds, setSelectedRouteIds] = useState<number[]>([]);
-
   const [blogsList, setBlogsList] = useState<BlogPost[]>([]);
   const [testimonialsList, setTestimonialsList] = useState<Testimonial[]>([]);
   const [faqsList, setFaqsList] = useState<FAQItem[]>([]);
   const [galleryList, setGalleryList] = useState<GalleryItem[]>([]);
+  const [servicesList, setServicesList] = useState<ServiceItem[]>([]);
 
   const [loadingData, setLoadingData] = useState(false);
 
-  // Modal / Form States
+  // Form / Modal States
   const [editingVehicle, setEditingVehicle] = useState<Partial<FleetVehicle> | null>(null);
   const [editingRoute, setEditingRoute] = useState<Partial<PopularRoute> | null>(null);
   const [editingBlog, setEditingBlog] = useState<Partial<BlogPost> | null>(null);
   const [editingTestimonial, setEditingTestimonial] = useState<Partial<Testimonial> | null>(null);
   const [editingFaq, setEditingFaq] = useState<Partial<FAQItem> | null>(null);
-  const [newGalleryItem, setNewGalleryItem] = useState<{ title: string; category: string; image_url: string }>({
-    title: '',
-    category: 'Fleet',
-    image_url: '',
-  });
-  const [newBooking, setNewBooking] = useState<Partial<Booking> | null>(null);
+  const [editingService, setEditingService] = useState<Partial<ServiceItem> | null>(null);
+  const [newGalleryItem, setNewGalleryItem] = useState({ title: '', category: 'Fleet', image_url: '' });
+  const [newBookingModal, setNewBookingModal] = useState<Partial<Booking> | null>(null);
 
-  // Site Settings Form State
+  // Settings State
   const [settingsForm, setSettingsForm] = useState<SiteSettings>({});
-
-  // Media Library Standalone Modal State
-  const [globalMediaModalOpen, setGlobalMediaModalOpen] = useState(false);
 
   const loadAllAdminData = async () => {
     setLoadingData(true);
     try {
-      const [st, bData, fData, rData, blData, tData, faqData, gData] = await Promise.all([
+      const [st, bData, fData, rData, blData, tData, faqData, gData, sData] = await Promise.all([
         cmsService.getStats(),
         bookingService.getAllBookings(bookingFilterStatus, bookingSearch),
         fleetService.getAllFleet(),
@@ -106,6 +120,7 @@ export const AdminDashboard: React.FC = () => {
         cmsService.getTestimonials(),
         cmsService.getFaqs(),
         cmsService.getGallery(),
+        cmsService.getServices(),
       ]);
 
       setStats(st);
@@ -116,9 +131,10 @@ export const AdminDashboard: React.FC = () => {
       setTestimonialsList(tData);
       setFaqsList(faqData);
       setGalleryList(gData);
+      setServicesList(sData);
       setSettingsForm(settings);
     } catch (err: any) {
-      console.error('Error loading admin dashboard:', err);
+      console.error('Error loading admin data:', err);
       showToast('Error syncing CMS data: ' + err.message, 'error');
     } finally {
       setLoadingData(false);
@@ -133,7 +149,7 @@ export const AdminDashboard: React.FC = () => {
     setSettingsForm(settings);
   }, [settings]);
 
-  // BOOKING ACTIONS
+  // BOOKING CRUD
   const handleUpdateBookingStatus = async (id: number, status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED') => {
     try {
       await bookingService.updateBooking(id, { status });
@@ -145,27 +161,40 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleDeleteBooking = async (id: number) => {
-    if (!window.confirm('Delete this booking record?')) return;
+    if (!window.confirm('Delete this booking permanently from database?')) return;
     try {
       await bookingService.deleteBooking(id);
-      showToast('Booking record deleted', 'info');
+      showToast('Booking deleted from CRM', 'info');
       loadAllAdminData();
     } catch (err: any) {
       showToast(err.message, 'error');
     }
   };
 
-  // FLEET ACTIONS
+  const handleCreateBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBookingModal || !newBookingModal.customer_name || !newBookingModal.customer_phone) return;
+    try {
+      await bookingService.createBooking(newBookingModal);
+      showToast('New booking added to CRM database', 'success');
+      setNewBookingModal(null);
+      loadAllAdminData();
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  // FLEET CRUD
   const handleSaveVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingVehicle || !editingVehicle.title) return;
+    if (!editingVehicle) return;
     try {
       if (editingVehicle.id) {
         await fleetService.updateVehicle(editingVehicle.id, editingVehicle);
-        showToast('Vehicle specification updated', 'success');
+        showToast('Vehicle updated in Fleet CMS', 'success');
       } else {
         await fleetService.createVehicle(editingVehicle);
-        showToast('New vehicle added to CMS fleet', 'success');
+        showToast('New vehicle added to Fleet CMS', 'success');
       }
       setEditingVehicle(null);
       loadAllAdminData();
@@ -175,35 +204,27 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleDeleteVehicle = async (id: number) => {
-    if (!window.confirm('Delete vehicle from CMS?')) return;
+    if (!window.confirm('Remove this vehicle from Fleet?')) return;
     try {
       await fleetService.deleteVehicle(id);
-      showToast('Vehicle removed from fleet', 'info');
+      showToast('Vehicle removed from CMS', 'info');
       loadAllAdminData();
     } catch (err: any) {
       showToast(err.message, 'error');
     }
   };
 
-  // ROUTE ACTIONS
+  // ROUTE CRUD
   const handleSaveRoute = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingRoute || !editingRoute.origin || !editingRoute.destination) {
-      showToast('Origin and Destination are required.', 'error');
-      return;
-    }
+    if (!editingRoute) return;
     try {
       if (editingRoute.id) {
         await routesService.updateRoute(editingRoute.id, editingRoute);
-        showToast('Outstation Route updated in CMS', 'success');
+        showToast('Intercity Route updated', 'success');
       } else {
-        await routesService.createRoute({
-          ...editingRoute,
-          is_active: editingRoute.is_active ?? true,
-          is_featured: editingRoute.is_featured ?? false,
-          is_popular: editingRoute.is_popular ?? false,
-        });
-        showToast('New Outstation Route created', 'success');
+        await routesService.createRoute(editingRoute);
+        showToast('New route added to database', 'success');
       }
       setEditingRoute(null);
       loadAllAdminData();
@@ -213,7 +234,7 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleDeleteRoute = async (id: number) => {
-    if (!window.confirm('Delete this outstation route?')) return;
+    if (!window.confirm('Delete this route?')) return;
     try {
       await routesService.deleteRoute(id);
       showToast('Route deleted', 'info');
@@ -223,57 +244,10 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleToggleRouteActive = async (route: PopularRoute) => {
-    try {
-      await routesService.updateRoute(route.id, { is_active: !(route.is_active ?? true) });
-      showToast(`Route status toggled for ${route.origin} → ${route.destination}`, 'success');
-      loadAllAdminData();
-    } catch (err: any) {
-      showToast(err.message, 'error');
-    }
-  };
-
-  const handleToggleRouteFeatured = async (route: PopularRoute) => {
-    try {
-      await routesService.updateRoute(route.id, { is_featured: !(route.is_featured ?? false) });
-      showToast(`Featured toggle updated for ${route.origin} → ${route.destination}`, 'success');
-      loadAllAdminData();
-    } catch (err: any) {
-      showToast(err.message, 'error');
-    }
-  };
-
-  const handleBulkDeleteRoutes = async () => {
-    if (selectedRouteIds.length === 0) return;
-    if (!window.confirm(`Delete ${selectedRouteIds.length} selected route(s)?`)) return;
-    try {
-      await Promise.all(selectedRouteIds.map((id) => routesService.deleteRoute(id)));
-      showToast(`${selectedRouteIds.length} route(s) deleted`, 'info');
-      setSelectedRouteIds([]);
-      loadAllAdminData();
-    } catch (err: any) {
-      showToast(err.message, 'error');
-    }
-  };
-
-  const handleBulkStatusChangeRoutes = async (setActive: boolean) => {
-    if (selectedRouteIds.length === 0) return;
-    try {
-      await Promise.all(
-        selectedRouteIds.map((id) => routesService.updateRoute(id, { is_active: setActive }))
-      );
-      showToast(`Marked ${selectedRouteIds.length} route(s) as ${setActive ? 'Active' : 'Disabled'}`, 'success');
-      setSelectedRouteIds([]);
-      loadAllAdminData();
-    } catch (err: any) {
-      showToast(err.message, 'error');
-    }
-  };
-
-  // BLOG ACTIONS
+  // BLOG CRUD
   const handleSaveBlog = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingBlog || !editingBlog.title) return;
+    if (!editingBlog) return;
     try {
       if (editingBlog.id) {
         await blogService.updateBlog(editingBlog.id, editingBlog);
@@ -293,23 +267,80 @@ export const AdminDashboard: React.FC = () => {
     if (!window.confirm('Delete article?')) return;
     try {
       await blogService.deleteBlog(id);
-      showToast('Article removed', 'info');
+      showToast('Article deleted', 'info');
       loadAllAdminData();
     } catch (err: any) {
       showToast(err.message, 'error');
     }
   };
 
-  // GALLERY ACTIONS
-  const handleSaveGalleryItem = async (e: React.FormEvent) => {
+  // TESTIMONIAL CRUD
+  const handleSaveTestimonial = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newGalleryItem.title || !newGalleryItem.image_url) {
-      showToast('Please provide a title and select/upload an image.', 'error');
-      return;
+    if (!editingTestimonial) return;
+    try {
+      if (editingTestimonial.id) {
+        await cmsService.updateTestimonial(editingTestimonial.id, editingTestimonial);
+        showToast('Testimonial updated', 'success');
+      } else {
+        await cmsService.createTestimonial(editingTestimonial);
+        showToast('Testimonial added', 'success');
+      }
+      setEditingTestimonial(null);
+      loadAllAdminData();
+    } catch (err: any) {
+      showToast(err.message, 'error');
     }
+  };
+
+  const handleDeleteTestimonial = async (id: number) => {
+    if (!window.confirm('Delete review?')) return;
+    try {
+      await cmsService.deleteTestimonial(id);
+      showToast('Review removed', 'info');
+      loadAllAdminData();
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  // FAQ CRUD
+  const handleSaveFaq = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingFaq) return;
+    try {
+      if (editingFaq.id) {
+        await cmsService.updateFaq(editingFaq.id, editingFaq);
+        showToast('FAQ updated', 'success');
+      } else {
+        await cmsService.createFaq(editingFaq);
+        showToast('FAQ added', 'success');
+      }
+      setEditingFaq(null);
+      loadAllAdminData();
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const handleDeleteFaq = async (id: number) => {
+    if (!window.confirm('Delete FAQ item?')) return;
+    try {
+      await cmsService.deleteFaq(id);
+      showToast('FAQ removed', 'info');
+      loadAllAdminData();
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  // GALLERY CRUD
+  const handleAddGalleryItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGalleryItem.title || !newGalleryItem.image_url) return;
     try {
       await cmsService.createGalleryItem(newGalleryItem);
-      showToast('Gallery item added!', 'success');
+      showToast('Gallery image uploaded to database', 'success');
       setNewGalleryItem({ title: '', category: 'Fleet', image_url: '' });
       loadAllAdminData();
     } catch (err: any) {
@@ -318,10 +349,29 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleDeleteGalleryItem = async (id: number) => {
-    if (!window.confirm('Delete gallery asset?')) return;
+    if (!window.confirm('Delete gallery item?')) return;
     try {
       await cmsService.deleteGalleryItem(id);
-      showToast('Gallery item deleted', 'info');
+      showToast('Gallery image deleted', 'info');
+      loadAllAdminData();
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  // SERVICES CRUD
+  const handleSaveService = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingService) return;
+    try {
+      if (editingService.id) {
+        await cmsService.updateService(editingService.id, editingService);
+        showToast('Service page updated', 'success');
+      } else {
+        await cmsService.createService(editingService);
+        showToast('New service page created', 'success');
+      }
+      setEditingService(null);
       loadAllAdminData();
     } catch (err: any) {
       showToast(err.message, 'error');
@@ -334,149 +384,141 @@ export const AdminDashboard: React.FC = () => {
     try {
       await cmsService.updateSettings(settingsForm);
       await refreshSettings();
-      showToast('Site Settings & Media persisted globally!', 'success');
+      showToast('Global settings saved and persisted!', 'success');
     } catch (err: any) {
       showToast(err.message, 'error');
     }
   };
 
-  // EXPORT CSV / BACKUP
-  const handleExportCSV = () => {
-    const headers = ['Ref', 'Customer', 'Phone', 'Vehicle', 'TripType', 'Pickup', 'Drop', 'Date', 'Time', 'Amount', 'Status'];
-    const rows = bookings.map((b) => [
-      b.booking_ref,
-      b.customer_name,
-      b.customer_phone,
-      b.vehicle,
-      b.trip_type,
-      `"${b.pickup}"`,
-      `"${b.drop_location}"`,
-      b.travel_date,
-      b.pickup_time,
-      b.estimated_amount,
-      b.status,
-    ]);
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Luthra_Travels_Bookings_Backup_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // FULL DATABASE BACKUP EXPORT
+  const handleExportFullBackup = () => {
+    const backupObject = {
+      export_date: new Date().toISOString(),
+      site_settings: settingsForm,
+      bookings: bookings,
+      fleet: fleetList,
+      routes: routesList,
+      blogs: blogsList,
+      testimonials: testimonialsList,
+      faqs: faqsList,
+      gallery: galleryList,
+      services: servicesList,
+    };
+
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupObject, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', `Luthra_Travels_Full_Database_Backup_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    showToast('Full Database JSON Backup downloaded!', 'success');
   };
+
+  // Extracted Customers list from bookings
+  const customerMap: Record<string, { name: string; phone: string; email: string; trips: number; totalSpent: number; lastTrip: string }> = {};
+  bookings.forEach((b) => {
+    const key = b.customer_phone || b.customer_name;
+    if (!key) return;
+    if (!customerMap[key]) {
+      customerMap[key] = {
+        name: b.customer_name || 'Passenger',
+        phone: b.customer_phone || 'N/A',
+        email: b.customer_email || 'N/A',
+        trips: 0,
+        totalSpent: 0,
+        lastTrip: b.travel_date,
+      };
+    }
+    customerMap[key].trips += 1;
+    customerMap[key].totalSpent += Number(b.estimated_amount) || 0;
+    if (b.travel_date > customerMap[key].lastTrip) {
+      customerMap[key].lastTrip = b.travel_date;
+    }
+  });
+  const customersList = Object.values(customerMap);
+
+  interface SidebarTabItem {
+    id: AdminTab;
+    label: string;
+    icon: React.ReactNode;
+    badge?: number;
+  }
+
+  const sidebarTabs: SidebarTabItem[] = [
+    { id: 'dashboard', label: 'Dashboard Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: 'bookings', label: 'Bookings CRM', icon: <Calendar className="w-4 h-4" />, badge: stats?.pendingBookings },
+    { id: 'customers', label: 'Customers Directory', icon: <Users className="w-4 h-4" /> },
+    { id: 'fleet', label: 'Fleet Vehicles', icon: <Car className="w-4 h-4" /> },
+    { id: 'routes', label: 'Routes & Cities', icon: <Compass className="w-4 h-4" /> },
+    { id: 'taxi-packages', label: 'Taxi Categories', icon: <Briefcase className="w-4 h-4" /> },
+    { id: 'services', label: 'Services CMS', icon: <Sliders className="w-4 h-4" /> },
+    { id: 'blogs', label: 'Blogs & Articles', icon: <FileText className="w-4 h-4" /> },
+    { id: 'testimonials', label: 'Reviews & Ratings', icon: <Star className="w-4 h-4" /> },
+    { id: 'faqs', label: 'Support FAQs', icon: <HelpCircle className="w-4 h-4" /> },
+    { id: 'gallery', label: 'Gallery & Media', icon: <ImageIcon className="w-4 h-4" /> },
+    { id: 'homepage', label: 'Homepage & Hero', icon: <HomeIcon className="w-4 h-4" /> },
+    { id: 'settings', label: 'Business Details', icon: <Phone className="w-4 h-4" /> },
+    { id: 'seo', label: 'SEO & Meta', icon: <Globe className="w-4 h-4" /> },
+    { id: 'pricing', label: 'Pricing Config', icon: <Tag className="w-4 h-4" /> },
+    { id: 'notifications', label: 'Activity Logs', icon: <Bell className="w-4 h-4" /> },
+    { id: 'users', label: 'Users & Roles', icon: <Lock className="w-4 h-4" /> },
+    { id: 'backup', label: 'Security & Backup', icon: <Database className="w-4 h-4" /> },
+  ];
 
   return (
     <div className="bg-zinc-950 text-white min-h-screen pt-24 pb-16 flex flex-col md:flex-row">
-      {/* CMS SIDEBAR */}
-      <aside className="w-full md:w-64 bg-zinc-900 border-r border-zinc-800 p-6 flex flex-col justify-between shrink-0">
+      {/* SIDEBAR NAVIGATION */}
+      <aside className="w-full md:w-64 bg-zinc-900 border-r border-zinc-800/80 p-5 flex flex-col justify-between shrink-0">
         <div className="space-y-6">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 pb-4 border-b border-zinc-800">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-[#C9A227] flex items-center justify-center font-bold text-zinc-950 text-base font-serif">
               LT
             </div>
             <div>
-              <span className="font-serif font-bold text-white text-base block leading-tight">Admin CMS Panel</span>
-              <span className="text-[10px] text-[#C9A227] font-mono block">Luthra Control Center</span>
+              <span className="font-serif font-bold text-white text-base block leading-tight">Admin CMS Portal</span>
+              <span className="text-[10px] text-[#C9A227] font-mono block">Connected to Supabase</span>
             </div>
           </div>
 
-          <nav className="space-y-1 text-xs font-medium">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-                activeTab === 'dashboard' ? 'bg-[#C9A227] text-zinc-950 font-bold' : 'text-zinc-300 hover:bg-zinc-800'
-              }`}
-            >
-              <LayoutDashboard className="w-4 h-4" /> Overview
-            </button>
-
-            <button
-              onClick={() => setActiveTab('bookings')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all ${
-                activeTab === 'bookings' ? 'bg-[#C9A227] text-zinc-950 font-bold' : 'text-zinc-300 hover:bg-zinc-800'
-              }`}
-            >
-              <span className="flex items-center gap-3"><Calendar className="w-4 h-4" /> Bookings CRM</span>
-              {stats?.pendingBookings ? (
-                <span className="bg-[#C9A227] text-zinc-950 text-[10px] font-extrabold font-mono px-2 py-0.5 rounded-full">
-                  {stats.pendingBookings}
+          <nav className="space-y-1 text-xs font-medium max-h-[70vh] overflow-y-auto pr-1">
+            {sidebarTabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-[#C9A227] text-zinc-950 font-bold shadow-md shadow-[#C9A227]/20'
+                    : 'text-zinc-300 hover:bg-zinc-800 hover:text-white'
+                }`}
+              >
+                <span className="flex items-center gap-2.5">
+                  {tab.icon}
+                  <span>{tab.label}</span>
                 </span>
-              ) : null}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('fleet')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-                activeTab === 'fleet' ? 'bg-[#C9A227] text-zinc-950 font-bold' : 'text-zinc-300 hover:bg-zinc-800'
-              }`}
-            >
-              <Car className="w-4 h-4" /> Fleet CMS
-            </button>
-
-            <button
-              onClick={() => setActiveTab('media')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-                activeTab === 'media' ? 'bg-[#C9A227] text-zinc-950 font-bold' : 'text-zinc-300 hover:bg-zinc-800'
-              }`}
-            >
-              <ImageIcon className="w-4 h-4 text-[#C9A227]" /> Media Library
-            </button>
-
-            <button
-              onClick={() => setActiveTab('routes')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-                activeTab === 'routes' ? 'bg-[#C9A227] text-zinc-950 font-bold' : 'text-zinc-300 hover:bg-zinc-800'
-              }`}
-            >
-              <Compass className="w-4 h-4" /> Popular Routes
-            </button>
-
-            <button
-              onClick={() => setActiveTab('blogs')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-                activeTab === 'blogs' ? 'bg-[#C9A227] text-zinc-950 font-bold' : 'text-zinc-300 hover:bg-zinc-800'
-              }`}
-            >
-              <FileText className="w-4 h-4" /> Articles
-            </button>
-
-            <button
-              onClick={() => setActiveTab('gallery')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-                activeTab === 'gallery' ? 'bg-[#C9A227] text-zinc-950 font-bold' : 'text-zinc-300 hover:bg-zinc-800'
-              }`}
-            >
-              <Layers className="w-4 h-4" /> Gallery Showcase
-            </button>
-
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-                activeTab === 'settings' ? 'bg-[#C9A227] text-zinc-950 font-bold' : 'text-zinc-300 hover:bg-zinc-800'
-              }`}
-            >
-              <Settings className="w-4 h-4" /> Site Settings
-            </button>
-
-            <button
-              onClick={() => setActiveTab('backup')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-                activeTab === 'backup' ? 'bg-[#C9A227] text-zinc-950 font-bold' : 'text-zinc-300 hover:bg-zinc-800'
-              }`}
-            >
-              <BarChart3 className="w-4 h-4" /> Analytics &amp; CSV
-            </button>
+                {tab.badge ? (
+                  <span className="bg-rose-500 text-white text-[10px] font-extrabold font-mono px-2 py-0.5 rounded-full">
+                    {tab.badge}
+                  </span>
+                ) : null}
+              </button>
+            ))}
           </nav>
         </div>
 
-        <div className="pt-6 border-t border-zinc-800 space-y-3">
+        <div className="pt-6 border-t border-zinc-800 space-y-2">
+          <div className="text-[11px] text-zinc-400 font-mono flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="truncate">{user?.email || 'admin@luthratravels.com'}</span>
+          </div>
+
           <button
             onClick={loadAllAdminData}
             className="w-full flex items-center justify-center gap-2 bg-zinc-950 border border-zinc-800 text-zinc-300 hover:text-white text-xs py-2 rounded-xl transition-colors"
           >
-            <RefreshCw className="w-3.5 h-3.5 text-[#C9A227]" /> Refresh Data
+            <RefreshCw className={`w-3.5 h-3.5 text-[#C9A227] ${loadingData ? 'animate-spin' : ''}`} /> Refresh Data
           </button>
+
           <button
             onClick={logout}
             className="w-full flex items-center justify-center gap-2 bg-rose-950/60 border border-rose-500/30 text-rose-300 text-xs py-2 rounded-xl hover:bg-rose-900/60 transition-colors"
@@ -489,7 +531,7 @@ export const AdminDashboard: React.FC = () => {
       {/* MAIN WORKSPACE CONTENT */}
       <main className="flex-1 p-6 md:p-10 overflow-x-hidden space-y-8">
         
-        {/* TOP METRICS */}
+        {/* TOP COUNTERS SUMMARY BAR */}
         {stats && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-zinc-900/80 p-5 rounded-2xl border border-zinc-800">
@@ -497,7 +539,7 @@ export const AdminDashboard: React.FC = () => {
               <span className="font-serif text-3xl font-bold text-white font-mono">{stats.totalBookings}</span>
             </div>
             <div className="bg-zinc-900/80 p-5 rounded-2xl border border-[#C9A227]/30">
-              <span className="text-[11px] text-[#C9A227] uppercase font-mono block">Pending CRM</span>
+              <span className="text-[11px] text-[#C9A227] uppercase font-mono block">Pending Actions</span>
               <span className="font-serif text-3xl font-bold text-[#C9A227] font-mono">{stats.pendingBookings}</span>
             </div>
             <div className="bg-zinc-900/80 p-5 rounded-2xl border border-emerald-500/30">
@@ -511,13 +553,16 @@ export const AdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 1: DASHBOARD OVERVIEW */}
+        {/* 1. OVERVIEW DASHBOARD */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="font-serif text-2xl font-bold text-white">Recent Reservations Log</h2>
-              <Button variant="ghost" size="sm" onClick={() => setActiveTab('bookings')}>
-                View Full Bookings CRM →
+              <div>
+                <h2 className="font-serif text-2xl font-bold text-white">Chauffeur Operations Overview</h2>
+                <p className="text-xs text-zinc-400">Live feed of active reservation requests and fleet dispatches.</p>
+              </div>
+              <Button variant="gold" size="sm" onClick={() => setActiveTab('bookings')}>
+                Open Full CRM →
               </Button>
             </div>
 
@@ -528,21 +573,34 @@ export const AdminDashboard: React.FC = () => {
                     <th className="p-3">Ref</th>
                     <th className="p-3">Customer</th>
                     <th className="p-3">Vehicle</th>
-                    <th className="p-3">Pickup / Drop</th>
-                    <th className="p-3">Date</th>
-                    <th className="p-3">Est. Fare</th>
+                    <th className="p-3">Trip</th>
+                    <th className="p-3">Date &amp; Time</th>
+                    <th className="p-3">Fare</th>
                     <th className="p-3">Status</th>
+                    <th className="p-3">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800 text-zinc-300">
-                  {bookings.slice(0, 5).map((b) => (
+                  {bookings.slice(0, 8).map((b) => (
                     <tr key={b.id} className="hover:bg-zinc-800/40">
                       <td className="p-3 font-mono font-bold text-[#C9A227]">{b.booking_ref}</td>
-                      <td className="p-3 font-medium text-white">{b.customer_name}<span className="block text-[10px] text-zinc-400">{b.customer_phone}</span></td>
+                      <td className="p-3 font-medium text-white">
+                        {b.customer_name}
+                        <span className="block text-[10px] text-zinc-400 font-mono">{b.customer_phone}</span>
+                      </td>
                       <td className="p-3">{b.vehicle}</td>
-                      <td className="p-3 max-w-xs truncate">{b.pickup} → {b.drop_location}</td>
-                      <td className="p-3">{b.travel_date}</td>
+                      <td className="p-3 uppercase text-[10px] font-mono">{b.trip_type}</td>
+                      <td className="p-3">{b.travel_date} at {b.pickup_time}</td>
                       <td className="p-3 font-mono font-bold text-[#C9A227]">₹{b.estimated_amount}</td>
+                      <td className="p-3">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${
+                          b.status === 'CONFIRMED' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                          b.status === 'PENDING' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                          b.status === 'COMPLETED' ? 'bg-blue-500/20 text-blue-300' : 'bg-rose-500/20 text-rose-300'
+                        }`}>
+                          {b.status}
+                        </span>
+                      </td>
                       <td className="p-3">
                         <select
                           value={b.status}
@@ -563,19 +621,97 @@ export const AdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 2: BOOKINGS CRM */}
+        {/* 2. BOOKINGS CRM */}
         {activeTab === 'bookings' && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <h2 className="font-serif text-2xl font-bold text-white">Bookings CRM Desk</h2>
-                <p className="text-xs text-zinc-400">Manage incoming reservation logs, customer details, and dispatch statuses.</p>
+                <p className="text-xs text-zinc-400">Search, filter, status edit, and manage all taxi orders.</p>
               </div>
-              <Button variant="secondary" size="sm" onClick={handleExportCSV} leftIcon={<Download className="w-4 h-4" />}>
-                Export CSV Backup
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="gold"
+                  size="sm"
+                  onClick={() => setNewBookingModal({
+                    customer_name: '', customer_phone: '', vehicle: 'Toyota Innova Crysta',
+                    trip_type: 'OUTSTATION', pickup: 'Delhi', drop_location: 'Agra',
+                    travel_date: new Date().toISOString().split('T')[0], pickup_time: '09:00',
+                    estimated_amount: 3200, status: 'PENDING'
+                  })}
+                  leftIcon={<Plus className="w-4 h-4" />}
+                >
+                  Create Booking
+                </Button>
+                <Button variant="secondary" size="sm" onClick={handleExportFullBackup} leftIcon={<Download className="w-4 h-4" />}>
+                  Export CSV
+                </Button>
+              </div>
             </div>
 
+            {/* Create Booking Modal */}
+            {newBookingModal && (
+              <form onSubmit={handleCreateBooking} className="bg-zinc-900 border border-[#C9A227]/40 p-6 rounded-2xl space-y-4">
+                <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
+                  <h3 className="font-serif text-lg font-bold text-[#C9A227]">Create New Reservation in Database</h3>
+                  <button type="button" onClick={() => setNewBookingModal(null)}><X className="w-5 h-5 text-zinc-400" /></button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                  <div>
+                    <label className="text-zinc-300 font-medium block">Customer Name *</label>
+                    <input type="text" required value={newBookingModal.customer_name || ''} onChange={e => setNewBookingModal({...newBookingModal, customer_name: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
+                  </div>
+                  <div>
+                    <label className="text-zinc-300 font-medium block">Customer Phone *</label>
+                    <input type="tel" required value={newBookingModal.customer_phone || ''} onChange={e => setNewBookingModal({...newBookingModal, customer_phone: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
+                  </div>
+                  <div>
+                    <label className="text-zinc-300 font-medium block">Vehicle</label>
+                    <select value={newBookingModal.vehicle || 'Toyota Innova Crysta'} onChange={e => setNewBookingModal({...newBookingModal, vehicle: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white">
+                      <option value="Toyota Innova Crysta">Toyota Innova Crysta</option>
+                      <option value="Maruti Ertiga">Maruti Ertiga</option>
+                      <option value="Maruti Dzire">Maruti Dzire</option>
+                      <option value="Honda Amaze">Honda Amaze</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-zinc-300 font-medium block">Pickup Location *</label>
+                    <input type="text" required value={newBookingModal.pickup || ''} onChange={e => setNewBookingModal({...newBookingModal, pickup: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
+                  </div>
+                  <div>
+                    <label className="text-zinc-300 font-medium block">Drop Destination *</label>
+                    <input type="text" required value={newBookingModal.drop_location || ''} onChange={e => setNewBookingModal({...newBookingModal, drop_location: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
+                  </div>
+                  <div>
+                    <label className="text-zinc-300 font-medium block">Estimated Fare (₹)</label>
+                    <input type="number" value={newBookingModal.estimated_amount || 0} onChange={e => setNewBookingModal({...newBookingModal, estimated_amount: parseFloat(e.target.value)})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-zinc-800">
+                  <Button type="button" variant="secondary" size="sm" onClick={() => setNewBookingModal(null)}>Cancel</Button>
+                  <Button type="submit" variant="gold" size="sm">Save Booking</Button>
+                </div>
+              </form>
+            )}
+
+            {/* Filter Bar */}
+            <div className="flex flex-col sm:flex-row gap-3 bg-zinc-900 p-3 rounded-2xl border border-zinc-800">
+              <div className="flex gap-2">
+                {['ALL', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setBookingFilterStatus(st)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-all ${
+                      bookingFilterStatus === st ? 'bg-[#C9A227] text-zinc-950' : 'text-zinc-400 hover:bg-zinc-800'
+                    }`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Full Bookings Table */}
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-zinc-950 text-[#C9A227] font-mono uppercase border-b border-zinc-800">
@@ -585,7 +721,7 @@ export const AdminDashboard: React.FC = () => {
                     <th className="p-3">Vehicle</th>
                     <th className="p-3">Pickup / Drop</th>
                     <th className="p-3">Date &amp; Time</th>
-                    <th className="p-3">Fare</th>
+                    <th className="p-3">Est. Fare</th>
                     <th className="p-3">Status</th>
                     <th className="p-3 text-right">Actions</th>
                   </tr>
@@ -594,9 +730,15 @@ export const AdminDashboard: React.FC = () => {
                   {bookings.map((b) => (
                     <tr key={b.id} className="hover:bg-zinc-800/40">
                       <td className="p-3 font-mono font-bold text-[#C9A227]">{b.booking_ref}</td>
-                      <td className="p-3 font-medium text-white">{b.customer_name}<span className="block text-[10px] text-zinc-400">{b.customer_phone}</span></td>
+                      <td className="p-3 font-medium text-white">
+                        {b.customer_name}
+                        <span className="block text-[10px] text-zinc-400 font-mono">{b.customer_phone}</span>
+                      </td>
                       <td className="p-3">{b.vehicle}</td>
-                      <td className="p-3 max-w-xs truncate">{b.pickup} → {b.drop_location}</td>
+                      <td className="p-3 max-w-xs truncate">
+                        <span className="text-zinc-200 block">{b.pickup}</span>
+                        <span className="text-zinc-400 block text-[10px]">→ {b.drop_location}</span>
+                      </td>
                       <td className="p-3">{b.travel_date} at {b.pickup_time}</td>
                       <td className="p-3 font-mono font-bold text-[#C9A227]">₹{b.estimated_amount}</td>
                       <td className="p-3">
@@ -612,7 +754,11 @@ export const AdminDashboard: React.FC = () => {
                         </select>
                       </td>
                       <td className="p-3 text-right">
-                        <button onClick={() => b.id && handleDeleteBooking(b.id)} className="text-rose-400 hover:text-rose-300 p-1">
+                        <button
+                          onClick={() => b.id && handleDeleteBooking(b.id)}
+                          className="text-rose-400 hover:text-rose-300 p-1 rounded"
+                          title="Delete Booking"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </td>
@@ -624,93 +770,101 @@ export const AdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 3: FLEET CMS WITH MEDIA PICKER */}
+        {/* 3. CUSTOMERS DIRECTORY */}
+        {activeTab === 'customers' && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="font-serif text-2xl font-bold text-white">Customer Directory</h2>
+              <p className="text-xs text-zinc-400">Extracted passenger contact history, completed trips, and total spend.</p>
+            </div>
+
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-zinc-950 text-[#C9A227] font-mono uppercase border-b border-zinc-800">
+                  <tr>
+                    <th className="p-3">Customer Name</th>
+                    <th className="p-3">Phone Number</th>
+                    <th className="p-3">Total Trips</th>
+                    <th className="p-3">Total Spent</th>
+                    <th className="p-3">Last Trip Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-800 text-zinc-300">
+                  {customersList.map((c, i) => (
+                    <tr key={i} className="hover:bg-zinc-800/40">
+                      <td className="p-3 font-semibold text-white">{c.name}</td>
+                      <td className="p-3 font-mono text-[#C9A227]">{c.phone}</td>
+                      <td className="p-3 font-mono">{c.trips} Trips</td>
+                      <td className="p-3 font-mono font-bold text-emerald-400">₹{c.totalSpent}</td>
+                      <td className="p-3 font-mono">{c.lastTrip}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* 4. FLEET VEHICLES */}
         {activeTab === 'fleet' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="font-serif text-2xl font-bold text-white">Fleet CMS Catalog</h2>
-                <p className="text-xs text-zinc-400">Manage fleet models, capacity specs, pricing rates, and media asset images.</p>
+                <p className="text-xs text-zinc-400">Manage vehicle models, rates, passenger capacities, and display order.</p>
               </div>
               <Button
                 variant="gold"
                 size="sm"
-                onClick={() =>
-                  setEditingVehicle({
-                    title: '',
-                    category: 'Luxury MPV',
-                    capacity_passengers: 7,
-                    luggage_count: 4,
-                    rate_per_km: 18,
-                    base_price: 2800,
-                    features: ['Captain Leather Seats', 'Dual AC Vents', 'Sanitized'],
-                    image_url: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=1200&auto=format&fit=crop',
-                    description: 'Premium chauffeur vehicle.',
-                    is_active: true,
-                    sorting_order: fleetList.length + 1,
-                  })
-                }
+                onClick={() => setEditingVehicle({
+                  title: '', category: 'Executive MPV', capacity_passengers: 7, luggage_count: 4,
+                  rate_per_km: 14, base_price: 2200, features: ['Air Conditioning', 'Bottled Water', 'Clean Cabin'],
+                  image_url: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=1200&auto=format&fit=crop',
+                  description: 'Clean company-owned taxi.', is_active: true, sorting_order: fleetList.length + 1
+                })}
                 leftIcon={<Plus className="w-4 h-4" />}
               >
                 Add Vehicle
               </Button>
             </div>
 
-            {/* Editing Vehicle Modal with MediaPicker */}
             {editingVehicle && (
               <form onSubmit={handleSaveVehicle} className="bg-zinc-900 border border-[#C9A227]/40 p-6 rounded-2xl space-y-4">
                 <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
                   <h3 className="font-serif text-lg font-bold text-[#C9A227]">
-                    {editingVehicle.id ? 'Edit Vehicle Specs & Image' : 'Add Vehicle to CMS'}
+                    {editingVehicle.id ? 'Edit Vehicle Specs' : 'Add New Vehicle'}
                   </h3>
                   <button type="button" onClick={() => setEditingVehicle(null)}><X className="w-5 h-5 text-zinc-400" /></button>
                 </div>
-
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-                  <div className="space-y-1">
-                    <label className="text-zinc-300 font-semibold block">Vehicle Name *</label>
-                    <input
-                      type="text"
-                      required
-                      value={editingVehicle.title || ''}
-                      onChange={(e) => setEditingVehicle({ ...editingVehicle, title: e.target.value })}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-white"
-                    />
+                  <div>
+                    <label className="text-zinc-300 font-medium block">Vehicle Title *</label>
+                    <input type="text" required value={editingVehicle.title || ''} onChange={e => setEditingVehicle({...editingVehicle, title: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
                   </div>
-
-                  <div className="space-y-1">
-                    <label className="text-zinc-300 font-semibold block">Category</label>
-                    <input
-                      type="text"
-                      value={editingVehicle.category || ''}
-                      onChange={(e) => setEditingVehicle({ ...editingVehicle, category: e.target.value })}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-white"
-                    />
+                  <div>
+                    <label className="text-zinc-300 font-medium block">Category</label>
+                    <input type="text" value={editingVehicle.category || ''} onChange={e => setEditingVehicle({...editingVehicle, category: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
                   </div>
-
-                  <div className="space-y-1">
-                    <label className="text-zinc-300 font-semibold block">Rate per KM (₹)</label>
-                    <input
-                      type="number"
-                      value={editingVehicle.rate_per_km || 14}
-                      onChange={(e) => setEditingVehicle({ ...editingVehicle, rate_per_km: parseFloat(e.target.value) })}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-[#C9A227] font-bold font-mono"
-                    />
+                  <div>
+                    <label className="text-zinc-300 font-medium block">Rate / KM (₹)</label>
+                    <input type="number" value={editingVehicle.rate_per_km || 14} onChange={e => setEditingVehicle({...editingVehicle, rate_per_km: parseFloat(e.target.value)})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
                   </div>
-
-                  {/* MediaPicker Integration for Vehicle Image */}
-                  <div className="sm:col-span-3">
-                    <MediaPicker
-                      label="Vehicle Photo Asset"
-                      value={editingVehicle.image_url || ''}
-                      onChange={(url) => setEditingVehicle({ ...editingVehicle, image_url: url })}
-                    />
+                  <div>
+                    <label className="text-zinc-300 font-medium block">Passenger Capacity</label>
+                    <input type="number" value={editingVehicle.capacity_passengers || 4} onChange={e => setEditingVehicle({...editingVehicle, capacity_passengers: parseInt(e.target.value, 10)})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
+                  </div>
+                  <div>
+                    <label className="text-zinc-300 font-medium block">Luggage Capacity</label>
+                    <input type="number" value={editingVehicle.luggage_count || 2} onChange={e => setEditingVehicle({...editingVehicle, luggage_count: parseInt(e.target.value, 10)})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
+                  </div>
+                  <div>
+                    <label className="text-zinc-300 font-medium block">Image URL</label>
+                    <input type="text" value={editingVehicle.image_url || ''} onChange={e => setEditingVehicle({...editingVehicle, image_url: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
                   </div>
                 </div>
-
-                <div className="flex justify-end gap-2 pt-3 border-t border-zinc-800">
-                  <Button variant="secondary" size="sm" onClick={() => setEditingVehicle(null)}>Cancel</Button>
-                  <Button variant="gold" size="sm" type="submit">Save Vehicle</Button>
+                <div className="flex justify-end gap-2 pt-2 border-t border-zinc-800">
+                  <Button type="button" variant="secondary" size="sm" onClick={() => setEditingVehicle(null)}>Cancel</Button>
+                  <Button type="submit" variant="gold" size="sm">Save Vehicle</Button>
                 </div>
               </form>
             )}
@@ -718,14 +872,14 @@ export const AdminDashboard: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {fleetList.map((veh) => (
                 <div key={veh.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
-                  <img src={veh.image_url} alt={veh.title} className="w-full h-36 object-cover rounded-xl border border-zinc-800" />
+                  <img src={veh.image_url} alt={veh.title} className="w-full h-36 object-cover rounded-xl" />
                   <div>
                     <h4 className="font-serif font-bold text-white text-base">{veh.title}</h4>
-                    <span className="text-xs text-[#C9A227] font-mono block font-bold">₹{veh.rate_per_km}/km</span>
+                    <span className="text-xs text-[#C9A227] font-mono">₹{veh.rate_per_km}/km • {veh.capacity_passengers} Seats</span>
                   </div>
                   <div className="flex justify-end gap-2 pt-2 border-t border-zinc-800">
-                    <button onClick={() => setEditingVehicle(veh)} className="p-1.5 bg-zinc-800 text-[#C9A227] rounded-lg"><Edit3 className="w-4 h-4" /></button>
-                    <button onClick={() => handleDeleteVehicle(veh.id)} className="p-1.5 bg-rose-950/60 text-rose-300 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => setEditingVehicle(veh)} className="p-1.5 bg-zinc-800 text-amber-300 rounded"><Edit3 className="w-4 h-4" /></button>
+                    <button onClick={() => handleDeleteVehicle(veh.id)} className="p-1.5 bg-rose-950/60 text-rose-300 rounded"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
               ))}
@@ -733,425 +887,151 @@ export const AdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 3.5: ROUTES CMS MODULE */}
+        {/* 5. ROUTES & CITIES */}
         {activeTab === 'routes' && (
           <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex justify-between items-center">
               <div>
-                <h2 className="font-serif text-2xl font-bold text-white">Outstation Route CMS</h2>
-                <p className="text-xs text-zinc-400">Manage outstation routes, one-way fares, status toggles, and featured tags.</p>
+                <h2 className="font-serif text-2xl font-bold text-white">Intercity Popular Routes CMS</h2>
+                <p className="text-xs text-zinc-400">Manage outstation routes, distances, and flat rates.</p>
               </div>
               <Button
                 variant="gold"
                 size="sm"
-                onClick={() =>
-                  setEditingRoute({
-                    origin: '',
-                    destination: '',
-                    price: 4200,
-                    vehicle_type: 'Maruti Ertiga / Sedan',
-                    distance_km: 245,
-                    estimated_time: '4.0 hours',
-                    is_active: true,
-                    is_featured: false,
-                    is_popular: false,
-                  })
-                }
+                onClick={() => setEditingRoute({ origin: 'Delhi NCR', destination: 'Agra', distance_km: 230, estimated_time: '3.5 hours', price: 3200, vehicle_type: 'Maruti Ertiga', is_popular: true })}
                 leftIcon={<Plus className="w-4 h-4" />}
               >
-                Add Outstation Route
+                Add Route
               </Button>
             </div>
 
-            {/* Filter & Search Bar */}
-            <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-mono text-zinc-400">Filter:</span>
-                {(['ALL', 'ACTIVE', 'INACTIVE', 'FEATURED'] as const).map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => setRouteFilterStatus(st)}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold font-mono transition-all ${
-                      routeFilterStatus === st ? 'bg-[#C9A227] text-zinc-950' : 'text-zinc-400 hover:bg-zinc-800'
-                    }`}
-                  >
-                    {st}
-                  </button>
-                ))}
-              </div>
-
-              <div className="relative w-full sm:w-64">
-                <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search routes..."
-                  value={routeSearch}
-                  onChange={(e) => setRouteSearch(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-[#C9A227]"
-                />
-              </div>
-            </div>
-
-            {/* Bulk Actions Bar */}
-            {selectedRouteIds.length > 0 && (
-              <div className="bg-[#C9A227]/10 border border-[#C9A227]/30 p-3 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
-                <span className="text-[#C9A227] font-semibold font-mono">
-                  {selectedRouteIds.length} route(s) selected
-                </span>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleBulkStatusChangeRoutes(true)}>
-                    Mark Active
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleBulkStatusChangeRoutes(false)}>
-                    Mark Disabled
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={handleBulkDeleteRoutes} className="text-rose-400 border-rose-500/30">
-                    Delete Selected
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Route Add/Edit Modal */}
             {editingRoute && (
               <form onSubmit={handleSaveRoute} className="bg-zinc-900 border border-[#C9A227]/40 p-6 rounded-2xl space-y-4">
-                <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
-                  <h3 className="font-serif text-lg font-bold text-[#C9A227]">
-                    {editingRoute.id ? 'Edit Outstation Route' : 'Create New Outstation Route'}
-                  </h3>
-                  <button type="button" onClick={() => setEditingRoute(null)}><X className="w-5 h-5 text-zinc-400" /></button>
-                </div>
-
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                   <div>
-                    <label className="text-zinc-300 font-semibold block">Origin City *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Chandigarh"
-                      value={editingRoute.origin || ''}
-                      onChange={(e) => setEditingRoute({ ...editingRoute, origin: e.target.value })}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-white"
-                    />
+                    <label className="text-zinc-300 font-medium block">Origin</label>
+                    <input type="text" value={editingRoute.origin || ''} onChange={e => setEditingRoute({...editingRoute, origin: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
                   </div>
-
                   <div>
-                    <label className="text-zinc-300 font-semibold block">Destination City *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Delhi"
-                      value={editingRoute.destination || ''}
-                      onChange={(e) => setEditingRoute({ ...editingRoute, destination: e.target.value })}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-white"
-                    />
+                    <label className="text-zinc-300 font-medium block">Destination</label>
+                    <input type="text" value={editingRoute.destination || ''} onChange={e => setEditingRoute({...editingRoute, destination: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
                   </div>
-
                   <div>
-                    <label className="text-zinc-300 font-semibold block">One-Way Fare (₹) <span className="text-zinc-500 font-normal">(Leave blank for "Contact for Price")</span></label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 4200 (Leave empty if price varies)"
-                      value={editingRoute.price ?? ''}
-                      onChange={(e) => setEditingRoute({ ...editingRoute, price: e.target.value === '' ? null : parseFloat(e.target.value) })}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-[#C9A227] font-bold font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-zinc-300 font-semibold block">Recommended Vehicle</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Maruti Ertiga / Sedan"
-                      value={editingRoute.vehicle_type || ''}
-                      onChange={(e) => setEditingRoute({ ...editingRoute, vehicle_type: e.target.value })}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-zinc-300 font-semibold block">Distance (KM)</label>
-                    <input
-                      type="number"
-                      value={editingRoute.distance_km ?? ''}
-                      onChange={(e) => setEditingRoute({ ...editingRoute, distance_km: parseFloat(e.target.value) })}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-white font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-zinc-300 font-semibold block">Est. Duration</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 4.0 hours"
-                      value={editingRoute.estimated_time || ''}
-                      onChange={(e) => setEditingRoute({ ...editingRoute, estimated_time: e.target.value })}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-white"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-3 flex flex-wrap gap-6 pt-2 border-t border-zinc-800">
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-300">
-                      <input
-                        type="checkbox"
-                        checked={editingRoute.is_active ?? true}
-                        onChange={(e) => setEditingRoute({ ...editingRoute, is_active: e.target.checked })}
-                        className="w-4 h-4 accent-[#C9A227]"
-                      />
-                      <span>Active / Available</span>
-                    </label>
-
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-300">
-                      <input
-                        type="checkbox"
-                        checked={editingRoute.is_featured ?? false}
-                        onChange={(e) => setEditingRoute({ ...editingRoute, is_featured: e.target.checked })}
-                        className="w-4 h-4 accent-[#C9A227]"
-                      />
-                      <span>Featured Route Badge</span>
-                    </label>
-
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-300">
-                      <input
-                        type="checkbox"
-                        checked={editingRoute.is_popular ?? false}
-                        onChange={(e) => setEditingRoute({ ...editingRoute, is_popular: e.target.checked })}
-                        className="w-4 h-4 accent-[#C9A227]"
-                      />
-                      <span>Popular Route Tag</span>
-                    </label>
+                    <label className="text-zinc-300 font-medium block">Flat Fare (₹)</label>
+                    <input type="number" value={editingRoute.price || 0} onChange={e => setEditingRoute({...editingRoute, price: parseFloat(e.target.value)})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
                   </div>
                 </div>
-
-                <div className="flex justify-end gap-2 pt-3 border-t border-zinc-800">
-                  <Button variant="secondary" size="sm" onClick={() => setEditingRoute(null)}>Cancel</Button>
-                  <Button variant="gold" size="sm" type="submit">Save Route</Button>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="secondary" size="sm" onClick={() => setEditingRoute(null)}>Cancel</Button>
+                  <Button type="submit" variant="gold" size="sm">Save Route</Button>
                 </div>
               </form>
             )}
 
-            {/* Routes Table */}
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-zinc-950 text-[#C9A227] font-mono uppercase border-b border-zinc-800">
+                <thead className="bg-zinc-950 text-[#C9A227] border-b border-zinc-800">
                   <tr>
-                    <th className="p-3 w-10">
-                      <input
-                        type="checkbox"
-                        checked={selectedRouteIds.length > 0 && selectedRouteIds.length === routesList.length}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedRouteIds(routesList.map((r) => r.id));
-                          } else {
-                            setSelectedRouteIds([]);
-                          }
-                        }}
-                        className="w-4 h-4 accent-[#C9A227]"
-                      />
-                    </th>
-                    <th className="p-3">Route (Origin → Destination)</th>
-                    <th className="p-3">Vehicle</th>
-                    <th className="p-3">Distance &amp; Time</th>
-                    <th className="p-3">One-Way Fare</th>
-                    <th className="p-3">Status</th>
-                    <th className="p-3">Featured</th>
-                    <th className="p-3 text-right">Actions</th>
+                    <th className="p-3">Route</th>
+                    <th className="p-3">Distance &amp; Duration</th>
+                    <th className="p-3">Recommended Vehicle</th>
+                    <th className="p-3">Flat Fare</th>
+                    <th className="p-3 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800 text-zinc-300">
-                  {routesList
-                    .filter((rt) => {
-                      if (routeFilterStatus === 'ACTIVE') return rt.is_active !== false;
-                      if (routeFilterStatus === 'INACTIVE') return rt.is_active === false;
-                      if (routeFilterStatus === 'FEATURED') return rt.is_featured === true;
-                      return true;
-                    })
-                    .filter((rt) => {
-                      if (!routeSearch.trim()) return true;
-                      const q = routeSearch.toLowerCase();
-                      return (
-                        rt.origin.toLowerCase().includes(q) ||
-                        rt.destination.toLowerCase().includes(q) ||
-                        (rt.vehicle_type && rt.vehicle_type.toLowerCase().includes(q))
-                      );
-                    })
-                    .map((rt) => {
-                      const isSelected = selectedRouteIds.includes(rt.id);
-                      const isContactPrice = rt.price === null || rt.price === undefined || rt.price === 0;
-
-                      return (
-                        <tr key={rt.id} className={`hover:bg-zinc-800/40 ${isSelected ? 'bg-zinc-800/60' : ''}`}>
-                          <td className="p-3">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedRouteIds([...selectedRouteIds, rt.id]);
-                                } else {
-                                  setSelectedRouteIds(selectedRouteIds.filter((id) => id !== rt.id));
-                                }
-                              }}
-                              className="w-4 h-4 accent-[#C9A227]"
-                            />
-                          </td>
-                          <td className="p-3 font-serif font-bold text-white">
-                            {rt.origin} <span className="text-[#C9A227] font-mono font-normal">→</span> {rt.destination}
-                          </td>
-                          <td className="p-3">{rt.vehicle_type || 'Sedan / MPV'}</td>
-                          <td className="p-3 font-mono">
-                            {rt.distance_km ? `${rt.distance_km} KM` : 'N/A'} {rt.estimated_time ? `(${rt.estimated_time})` : ''}
-                          </td>
-                          <td className="p-3 font-mono font-bold">
-                            {isContactPrice ? (
-                              <span className="text-amber-400 text-[11px]">Contact for Price</span>
-                            ) : (
-                              <span className="text-[#C9A227]">₹{rt.price?.toLocaleString()}</span>
-                            )}
-                          </td>
-                          <td className="p-3">
-                            <button
-                              onClick={() => handleToggleRouteActive(rt)}
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${
-                                rt.is_active !== false ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
-                              }`}
-                            >
-                              {rt.is_active !== false ? 'Active' : 'Disabled'}
-                            </button>
-                          </td>
-                          <td className="p-3">
-                            <button
-                              onClick={() => handleToggleRouteFeatured(rt)}
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${
-                                rt.is_featured ? 'bg-[#C9A227]/20 text-[#C9A227] border border-[#C9A227]/30' : 'bg-zinc-800 text-zinc-400'
-                              }`}
-                            >
-                              {rt.is_featured ? 'Featured' : 'Normal'}
-                            </button>
-                          </td>
-                          <td className="p-3 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button onClick={() => setEditingRoute(rt)} className="p-1.5 bg-zinc-800 text-[#C9A227] rounded-lg">
-                                <Edit3 className="w-3.5 h-3.5" />
-                              </button>
-                              <button onClick={() => handleDeleteRoute(rt.id)} className="p-1.5 bg-rose-950/60 text-rose-300 rounded-lg">
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                  {routesList.map((r) => (
+                    <tr key={r.id}>
+                      <td className="p-3 font-bold text-white">{r.origin} → {r.destination}</td>
+                      <td className="p-3">{r.distance_km} KM ({r.estimated_time})</td>
+                      <td className="p-3">{r.vehicle_type}</td>
+                      <td className="p-3 font-mono font-bold text-[#C9A227]">₹{r.price}</td>
+                      <td className="p-3 text-right">
+                        <button onClick={() => handleDeleteRoute(r.id)} className="text-rose-400 p-1"><Trash2 className="w-4 h-4" /></button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           </div>
         )}
 
-        {/* TAB 4: STANDALONE MEDIA LIBRARY MANAGER */}
-        {activeTab === 'media' && (
+        {/* 6. TAXI CATEGORIES */}
+        {activeTab === 'taxi-packages' && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="font-serif text-2xl font-bold text-white">Media Library &amp; Asset Management</h2>
-                <p className="text-xs text-zinc-400">Upload, drag-and-drop, filter, and manage persistent storage images across the website.</p>
-              </div>
-              <Button variant="gold" size="sm" onClick={() => setGlobalMediaModalOpen(true)} leftIcon={<Upload className="w-4 h-4" />}>
-                Open Media Manager
-              </Button>
+            <div>
+              <h2 className="font-serif text-2xl font-bold text-white">Taxi Categories &amp; Fare Rules</h2>
+              <p className="text-xs text-zinc-400">Configure inclusions and rules for Airport, Local, Outstation, and Corporate taxis.</p>
             </div>
 
-            <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6">
-              <MediaLibraryModal
-                isOpen={true}
-                onClose={() => setActiveTab('dashboard')}
-                title="Admin Media Asset Library"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+              <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-3">
+                <h3 className="font-serif font-bold text-lg text-[#C9A227]">Airport Taxi Rules</h3>
+                <p className="text-zinc-400">IGI Airport T1, T2 &amp; T3 transfers include 60 minutes free waiting time post flight landing and real-time IATA radar flight tracking.</p>
+              </div>
+
+              <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-3">
+                <h3 className="font-serif font-bold text-lg text-[#C9A227]">Local Taxi Packages</h3>
+                <p className="text-zinc-400">Hourly packages available: 4hr/40km, 8hr/80km, and 12hr/120km with transparent overage fees.</p>
+              </div>
+
+              <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-3">
+                <h3 className="font-serif font-bold text-lg text-[#C9A227]">Outstation Taxi Rules</h3>
+                <p className="text-zinc-400">Minimum 250 KM daily billing for outstation round trips. State tolls and parking fees are charged at actual government receipts.</p>
+              </div>
+
+              <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-3">
+                <h3 className="font-serif font-bold text-lg text-[#C9A227]">Corporate Executive Mobility</h3>
+                <p className="text-zinc-400">Consolidated monthly GST invoicing and dedicated account manager for corporate accounts.</p>
+              </div>
             </div>
           </div>
         )}
 
-        {/* TAB 5: ARTICLES / BLOGS CMS WITH MEDIA PICKER */}
-        {activeTab === 'blogs' && (
+        {/* 7. SERVICES CMS */}
+        {activeTab === 'services' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="font-serif text-2xl font-bold text-white">Articles &amp; Travel Journal CMS</h2>
-                <p className="text-xs text-zinc-400">Publish travel guides and corporate mobility news with cover media.</p>
+                <h2 className="font-serif text-2xl font-bold text-white">Website Services CMS</h2>
+                <p className="text-xs text-zinc-400">Manage content for Airport Transfers, Outstation Taxi, Local Taxi, and Corporate Travel pages.</p>
               </div>
-              <Button
-                variant="gold"
-                size="sm"
-                onClick={() => setEditingBlog({ title: '', excerpt: '', content: '', cover_image: '', category: 'Travel Guide', author: 'Vikram Luthra', is_published: true })}
-                leftIcon={<Plus className="w-4 h-4" />}
-              >
-                Create Article
+              <Button variant="gold" size="sm" onClick={() => setEditingService({ title: '', slug: '', short_desc: '', full_desc: '', cover_image: '' })} leftIcon={<Plus className="w-4 h-4" />}>
+                Add Service
               </Button>
             </div>
 
-            {editingBlog && (
-              <form onSubmit={handleSaveBlog} className="bg-zinc-900 border border-[#C9A227]/40 p-6 rounded-2xl space-y-4">
-                <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
-                  <h3 className="font-serif text-lg font-bold text-[#C9A227]">
-                    {editingBlog.id ? 'Edit Article' : 'New Article Entry'}
-                  </h3>
-                  <button type="button" onClick={() => setEditingBlog(null)}><X className="w-5 h-5 text-zinc-400" /></button>
-                </div>
-
-                <div className="space-y-3 text-xs">
+            {editingService && (
+              <form onSubmit={handleSaveService} className="bg-zinc-900 border border-[#C9A227]/40 p-6 rounded-2xl space-y-4 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-zinc-300 font-semibold block">Title *</label>
-                    <input
-                      type="text"
-                      required
-                      value={editingBlog.title || ''}
-                      onChange={(e) => setEditingBlog({ ...editingBlog, title: e.target.value })}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-white"
-                    />
+                    <label className="text-zinc-300 font-medium block">Title *</label>
+                    <input type="text" required value={editingService.title || ''} onChange={e => setEditingService({...editingService, title: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
                   </div>
-
-                  <MediaPicker
-                    label="Article Cover Image Asset"
-                    value={editingBlog.cover_image || ''}
-                    onChange={(url) => setEditingBlog({ ...editingBlog, cover_image: url })}
-                  />
-
                   <div>
-                    <label className="text-zinc-300 font-semibold block">Excerpt</label>
-                    <textarea
-                      rows={2}
-                      value={editingBlog.excerpt || ''}
-                      onChange={(e) => setEditingBlog({ ...editingBlog, excerpt: e.target.value })}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-white"
-                    />
+                    <label className="text-zinc-300 font-medium block">Cover Image URL</label>
+                    <input type="text" value={editingService.cover_image || ''} onChange={e => setEditingService({...editingService, cover_image: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
                   </div>
-
-                  <div>
-                    <label className="text-zinc-300 font-semibold block">Body Content</label>
-                    <textarea
-                      rows={5}
-                      value={editingBlog.content || ''}
-                      onChange={(e) => setEditingBlog({ ...editingBlog, content: e.target.value })}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-white"
-                    />
+                  <div className="sm:col-span-2">
+                    <label className="text-zinc-300 font-medium block">Short Description</label>
+                    <input type="text" value={editingService.short_desc || ''} onChange={e => setEditingService({...editingService, short_desc: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
                   </div>
                 </div>
-
-                <div className="flex justify-end gap-2 pt-3 border-t border-zinc-800">
-                  <Button variant="secondary" size="sm" onClick={() => setEditingBlog(null)}>Cancel</Button>
-                  <Button variant="gold" size="sm" type="submit">Save Article</Button>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="secondary" size="sm" onClick={() => setEditingService(null)}>Cancel</Button>
+                  <Button type="submit" variant="gold" size="sm">Save Service</Button>
                 </div>
               </form>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {blogsList.map((post) => (
-                <div key={post.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden p-4 space-y-3">
-                  <img src={post.cover_image} alt={post.title} className="w-full h-36 object-cover rounded-xl border border-zinc-800" />
-                  <h4 className="font-serif font-bold text-white text-base">{post.title}</h4>
-                  <div className="flex justify-end gap-2 pt-2 border-t border-zinc-800">
-                    <button onClick={() => setEditingBlog(post)} className="p-1.5 bg-zinc-800 text-[#C9A227] rounded-lg"><Edit3 className="w-4 h-4" /></button>
-                    <button onClick={() => handleDeleteBlog(post.id)} className="p-1.5 bg-rose-950/60 text-rose-300 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {servicesList.map((svc) => (
+                <div key={svc.id} className="bg-zinc-900 border border-zinc-800 p-5 rounded-2xl space-y-2">
+                  <h4 className="font-serif font-bold text-white text-lg">{svc.title}</h4>
+                  <p className="text-xs text-zinc-400">{svc.short_desc}</p>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button onClick={() => setEditingService(svc)} className="p-1.5 bg-zinc-800 text-amber-300 rounded"><Edit3 className="w-4 h-4" /></button>
                   </div>
                 </div>
               ))}
@@ -1159,253 +1039,302 @@ export const AdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 6: GALLERY SHOWCASE WITH MEDIA PICKER */}
-        {activeTab === 'gallery' && (
+        {/* 8. BLOGS */}
+        {activeTab === 'blogs' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="font-serif text-2xl font-bold text-white">Gallery Showcase CMS</h2>
-                <p className="text-xs text-zinc-400">Add portfolio images for luxury transfers, airport pickups, and outstation trips.</p>
+                <h2 className="font-serif text-2xl font-bold text-white">Travel Journal &amp; Blogs CMS</h2>
+                <p className="text-xs text-zinc-400">Publish guides, route tips, and executive travel articles.</p>
               </div>
+              <Button variant="gold" size="sm" onClick={() => setEditingBlog({ title: '', excerpt: '', content: '', author: 'Vikram Luthra', category: 'Travel Guide', cover_image: '' })} leftIcon={<Plus className="w-4 h-4" />}>
+                Write Article
+              </Button>
             </div>
 
-            <form onSubmit={handleSaveGalleryItem} className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-4">
-              <h3 className="font-serif text-lg font-bold text-[#C9A227]">Add New Gallery Asset</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  required
-                  placeholder="Asset Title e.g. IGI Terminal 3 Pickup"
-                  value={newGalleryItem.title}
-                  onChange={(e) => setNewGalleryItem({ ...newGalleryItem, title: e.target.value })}
-                  className="bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white"
-                />
-
-                <select
-                  value={newGalleryItem.category}
-                  onChange={(e) => setNewGalleryItem({ ...newGalleryItem, category: e.target.value })}
-                  className="bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white"
-                >
-                  <option value="Fleet">Fleet</option>
-                  <option value="Airport">Airport</option>
-                  <option value="Outstation">Outstation</option>
-                  <option value="Weddings">Weddings</option>
-                </select>
-
-                <div className="sm:col-span-2">
-                  <MediaPicker
-                    label="Gallery Image URL"
-                    value={newGalleryItem.image_url}
-                    onChange={(url) => setNewGalleryItem({ ...newGalleryItem, image_url: url })}
-                  />
+            {editingBlog && (
+              <form onSubmit={handleSaveBlog} className="bg-zinc-900 border border-[#C9A227]/40 p-6 rounded-2xl space-y-4 text-xs">
+                <div>
+                  <label className="text-zinc-300 font-medium block">Title *</label>
+                  <input type="text" required value={editingBlog.title || ''} onChange={e => setEditingBlog({...editingBlog, title: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
                 </div>
-              </div>
+                <div>
+                  <label className="text-zinc-300 font-medium block">Cover Image URL</label>
+                  <input type="text" value={editingBlog.cover_image || ''} onChange={e => setEditingBlog({...editingBlog, cover_image: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
+                </div>
+                <div>
+                  <label className="text-zinc-300 font-medium block">Excerpt</label>
+                  <input type="text" value={editingBlog.excerpt || ''} onChange={e => setEditingBlog({...editingBlog, excerpt: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
+                </div>
+                <div>
+                  <label className="text-zinc-300 font-medium block">Full Content</label>
+                  <textarea rows={5} value={editingBlog.content || ''} onChange={e => setEditingBlog({...editingBlog, content: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="secondary" size="sm" onClick={() => setEditingBlog(null)}>Cancel</Button>
+                  <Button type="submit" variant="gold" size="sm">Save Article</Button>
+                </div>
+              </form>
+            )}
 
-              <Button variant="gold" size="sm" type="submit" leftIcon={<Plus className="w-4 h-4" />}>
-                Add to Gallery
-              </Button>
-            </form>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {galleryList.map((g) => (
-                <div key={g.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 space-y-2 relative group">
-                  <img src={g.image_url} alt={g.title} className="w-full h-32 object-cover rounded-xl border border-zinc-800" />
-                  <span className="text-xs font-semibold text-white block truncate">{g.title}</span>
-                  <button
-                    onClick={() => handleDeleteGalleryItem(g.id)}
-                    className="absolute top-4 right-4 p-1.5 bg-rose-950/80 text-rose-300 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {blogsList.map((b) => (
+                <div key={b.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-2">
+                  <img src={b.cover_image} alt={b.title} className="w-full h-36 object-cover rounded-xl" />
+                  <h4 className="font-serif font-bold text-white text-sm line-clamp-1">{b.title}</h4>
+                  <p className="text-xs text-zinc-400 line-clamp-2">{b.excerpt}</p>
+                  <div className="flex justify-end gap-2 pt-2 border-t border-zinc-800">
+                    <button onClick={() => setEditingBlog(b)} className="p-1.5 bg-zinc-800 text-amber-300 rounded"><Edit3 className="w-4 h-4" /></button>
+                    <button onClick={() => handleDeleteBlog(b.id)} className="p-1.5 bg-rose-950/60 text-rose-300 rounded"><Trash2 className="w-4 h-4" /></button>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* TAB 7: SITE CONFIGURATION WITH SEO OG MEDIA PICKER */}
-        {activeTab === 'settings' && (
-          <form onSubmit={handleSaveSettings} className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl space-y-6">
-            <h2 className="font-serif text-2xl font-bold text-[#C9A227]">Global CMS Site &amp; Media Configuration</h2>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
-              <div className="space-y-1">
-                <label className="text-zinc-300 font-medium">Company Name</label>
-                <input
-                  type="text"
-                  value={settingsForm.company_name || ''}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, company_name: e.target.value })}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white"
-                />
+        {/* 9. TESTIMONIALS */}
+        {activeTab === 'testimonials' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="font-serif text-2xl font-bold text-white">Reviews &amp; Testimonials CMS</h2>
+                <p className="text-xs text-zinc-400">Manage client reviews, ratings, and avatars.</p>
               </div>
-
-              <div className="space-y-1">
-                <label className="text-zinc-300 font-medium">Primary Hotline</label>
-                <input
-                  type="text"
-                  value={settingsForm.phone_primary || ''}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, phone_primary: e.target.value })}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white font-mono"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-zinc-300 font-medium">Base Per-KM Rate (₹/KM)</label>
-                <input
-                  type="number"
-                  value={settingsForm.default_rate_per_km || '14'}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, default_rate_per_km: e.target.value })}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-[#C9A227] font-bold font-mono"
-                />
-              </div>
-
-              {/* Why Choose Us Controls */}
-              <div className="sm:col-span-2 pt-4 border-t border-zinc-800 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-serif text-lg font-bold text-[#C9A227]">"Why Choose Us" CMS Section Settings</h3>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <span className="text-xs text-zinc-300">Show Section</span>
-                    <input
-                      type="checkbox"
-                      checked={settingsForm.why_choose_visible !== 'false'}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, why_choose_visible: e.target.checked ? 'true' : 'false' })}
-                      className="w-4 h-4 accent-[#C9A227]"
-                    />
-                  </label>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="text-zinc-300 font-medium">Section Title</label>
-                    <input
-                      type="text"
-                      value={settingsForm.why_choose_title || 'Why Choose Luthra Travels?'}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, why_choose_title: e.target.value })}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white"
-                    />
-                  </div>
-
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="text-zinc-300 font-medium">Section Subtitle</label>
-                    <input
-                      type="text"
-                      value={settingsForm.why_choose_subtitle || 'Experience safe, comfortable and reliable taxi services with professional drivers and transparent pricing.'}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, why_choose_subtitle: e.target.value })}
-                      className="w-full bg-zinc-950 border border-slate-800 rounded-xl p-3 text-white"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-zinc-300 font-medium">Happy Customers Stat</label>
-                    <input
-                      type="text"
-                      value={settingsForm.stat_happy_customers || '5000+'}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, stat_happy_customers: e.target.value })}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-[#C9A227] font-mono"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-zinc-300 font-medium">Successful Trips Stat</label>
-                    <input
-                      type="text"
-                      value={settingsForm.stat_successful_trips || '10000+'}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, stat_successful_trips: e.target.value })}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-[#C9A227] font-mono"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-zinc-300 font-medium">Vehicles Available Stat</label>
-                    <input
-                      type="text"
-                      value={settingsForm.stat_vehicles_available || '4'}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, stat_vehicles_available: e.target.value })}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-[#C9A227] font-mono"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-zinc-300 font-medium">Customer Support Stat</label>
-                    <input
-                      type="text"
-                      value={settingsForm.stat_customer_support || '24×7'}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, stat_customer_support: e.target.value })}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-[#C9A227] font-mono"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Featured Tour Package CMS Controls (Manali Tour) */}
-              <div className="sm:col-span-2 pt-4 border-t border-zinc-800 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-serif text-lg font-bold text-[#C9A227]">Featured Tour Package CMS Settings</h3>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <span className="text-xs text-zinc-300">Show Tour Section</span>
-                    <input
-                      type="checkbox"
-                      checked={settingsForm.outstation_tour_visible !== 'false'}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, outstation_tour_visible: e.target.checked ? 'true' : 'false' })}
-                      className="w-4 h-4 accent-[#C9A227]"
-                    />
-                  </label>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="text-zinc-300 font-medium">Tour Title</label>
-                    <input
-                      type="text"
-                      value={settingsForm.outstation_tour_title || 'Manali Tour Package Available'}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, outstation_tour_title: e.target.value })}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white"
-                    />
-                  </div>
-
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="text-zinc-300 font-medium">Tour Description</label>
-                    <textarea
-                      rows={2}
-                      value={settingsForm.outstation_tour_desc || 'Book comfortable and reliable taxi service for your Manali trip with professional drivers and well-maintained vehicles.'}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, outstation_tour_desc: e.target.value })}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <MediaPicker
-                      label="Tour Cover Image Asset"
-                      value={settingsForm.outstation_tour_image || 'https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?q=80&w=1200&auto=format&fit=crop'}
-                      onChange={(url) => setSettingsForm({ ...settingsForm, outstation_tour_image: url })}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="sm:col-span-2">
-                <MediaPicker
-                  label="SEO OpenGraph Brand Banner Image"
-                  value={settingsForm.og_image || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=1200&auto=format&fit=crop'}
-                  onChange={(url) => setSettingsForm({ ...settingsForm, og_image: url })}
-                />
-              </div>
+              <Button variant="gold" size="sm" onClick={() => setEditingTestimonial({ name: '', title_role: 'Corporate Executive', rating: 5, comment: '', city: 'Delhi' })} leftIcon={<Plus className="w-4 h-4" />}>
+                Add Review
+              </Button>
             </div>
 
-            <Button variant="gold" size="md" type="submit" leftIcon={<Save className="w-4 h-4" />}>
-              Save Site Settings
-            </Button>
+            {editingTestimonial && (
+              <form onSubmit={handleSaveTestimonial} className="bg-zinc-900 border border-[#C9A227]/40 p-6 rounded-2xl space-y-4 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-zinc-300 font-medium block">Client Name *</label>
+                    <input type="text" required value={editingTestimonial.name || ''} onChange={e => setEditingTestimonial({...editingTestimonial, name: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
+                  </div>
+                  <div>
+                    <label className="text-zinc-300 font-medium block">Rating (1-5)</label>
+                    <input type="number" min={1} max={5} value={editingTestimonial.rating || 5} onChange={e => setEditingTestimonial({...editingTestimonial, rating: parseInt(e.target.value, 10)})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-zinc-300 font-medium block">Review Comment *</label>
+                    <textarea rows={3} required value={editingTestimonial.comment || ''} onChange={e => setEditingTestimonial({...editingTestimonial, comment: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="secondary" size="sm" onClick={() => setEditingTestimonial(null)}>Cancel</Button>
+                  <Button type="submit" variant="gold" size="sm">Save Review</Button>
+                </div>
+              </form>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {testimonialsList.map((t) => (
+                <div key={t.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-2">
+                  <h4 className="font-serif font-bold text-white text-sm">{t.name} ({t.rating}★)</h4>
+                  <p className="text-xs text-zinc-300 italic">"{t.comment}"</p>
+                  <div className="flex justify-end gap-2 pt-2 border-t border-zinc-800">
+                    <button onClick={() => handleDeleteTestimonial(t.id)} className="p-1.5 bg-rose-950/60 text-rose-300 rounded"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 10. FAQS */}
+        {activeTab === 'faqs' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="font-serif text-2xl font-bold text-white">Support FAQs CMS</h2>
+                <p className="text-xs text-zinc-400">Manage support questions and answers.</p>
+              </div>
+              <Button variant="gold" size="sm" onClick={() => setEditingFaq({ question: '', answer: '', category: 'General' })} leftIcon={<Plus className="w-4 h-4" />}>
+                Add FAQ
+              </Button>
+            </div>
+
+            {editingFaq && (
+              <form onSubmit={handleSaveFaq} className="bg-zinc-900 border border-[#C9A227]/40 p-6 rounded-2xl space-y-4 text-xs">
+                <div>
+                  <label className="text-zinc-300 font-medium block">Question *</label>
+                  <input type="text" required value={editingFaq.question || ''} onChange={e => setEditingFaq({...editingFaq, question: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
+                </div>
+                <div>
+                  <label className="text-zinc-300 font-medium block">Answer *</label>
+                  <textarea rows={3} required value={editingFaq.answer || ''} onChange={e => setEditingFaq({...editingFaq, answer: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded p-2 text-white" />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="secondary" size="sm" onClick={() => setEditingFaq(null)}>Cancel</Button>
+                  <Button type="submit" variant="gold" size="sm">Save FAQ</Button>
+                </div>
+              </form>
+            )}
+
+            <div className="space-y-3">
+              {faqsList.map((f) => (
+                <div key={f.id} className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl flex justify-between items-start">
+                  <div>
+                    <h4 className="font-serif font-bold text-white text-sm">{f.question}</h4>
+                    <p className="text-xs text-zinc-400 mt-1">{f.answer}</p>
+                  </div>
+                  <button onClick={() => handleDeleteFaq(f.id)} className="text-rose-400 p-1"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 11. GALLERY */}
+        {activeTab === 'gallery' && (
+          <div className="space-y-6">
+            <h2 className="font-serif text-2xl font-bold text-white">Gallery &amp; Media Library</h2>
+            <form onSubmit={handleAddGalleryItem} className="bg-zinc-900 border border border-zinc-800 p-4 rounded-2xl flex flex-col sm:flex-row gap-3 text-xs">
+              <input type="text" required placeholder="Image Title" value={newGalleryItem.title} onChange={e => setNewGalleryItem({...newGalleryItem, title: e.target.value})} className="bg-zinc-950 border border-zinc-800 rounded p-2 text-white flex-1" />
+              <input type="text" required placeholder="Image URL" value={newGalleryItem.image_url} onChange={e => setNewGalleryItem({...newGalleryItem, image_url: e.target.value})} className="bg-zinc-950 border border-zinc-800 rounded p-2 text-white flex-1" />
+              <Button type="submit" variant="gold" size="sm">Upload Image</Button>
+            </form>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {galleryList.map((g) => (
+                <div key={g.id} className="relative group bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800 h-40">
+                  <img src={g.image_url} alt={g.title} className="w-full h-full object-cover" />
+                  <button onClick={() => handleDeleteGalleryItem(g.id)} className="absolute top-2 right-2 bg-rose-600 text-white p-1 rounded-full"><X className="w-4 h-4" /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 12. HOMEPAGE & HERO CMS */}
+        {activeTab === 'homepage' && (
+          <form onSubmit={handleSaveSettings} className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl space-y-6 text-xs">
+            <h2 className="font-serif text-2xl font-bold text-[#C9A227]">Homepage &amp; Hero CMS Controls</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-zinc-300 font-medium block">Main Hero Title</label>
+                <input type="text" value={settingsForm.hero_title || 'Premium Taxi Services Across India'} onChange={e => setSettingsForm({...settingsForm, hero_title: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white" />
+              </div>
+              <div>
+                <label className="text-zinc-300 font-medium block">Hero Subtitle</label>
+                <input type="text" value={settingsForm.hero_subtitle || 'Airport Transfers • Outstation Trips • Local Taxi • Corporate Travel'} onChange={e => setSettingsForm({...settingsForm, hero_subtitle: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white" />
+              </div>
+              <div>
+                <label className="text-zinc-300 font-medium block">Why Choose Us Section Title</label>
+                <input type="text" value={settingsForm.why_choose_title || 'Why Choose Luthra Travels?'} onChange={e => setSettingsForm({...settingsForm, why_choose_title: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white" />
+              </div>
+              <div>
+                <label className="text-zinc-300 font-medium block">Why Choose Us Subtitle</label>
+                <input type="text" value={settingsForm.why_choose_subtitle || 'Experience safe, comfortable and reliable taxi services with professional drivers and transparent pricing.'} onChange={e => setSettingsForm({...settingsForm, why_choose_subtitle: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white" />
+              </div>
+            </div>
+            <Button type="submit" variant="gold" size="sm" leftIcon={<Save className="w-4 h-4" />}>Save Homepage Settings</Button>
           </form>
         )}
 
-      </main>
+        {/* 13. BUSINESS SETTINGS */}
+        {activeTab === 'settings' && (
+          <form onSubmit={handleSaveSettings} className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl space-y-6 text-xs">
+            <h2 className="font-serif text-2xl font-bold text-[#C9A227]">Business &amp; Contact Information</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-zinc-300 font-medium block">Company Name</label>
+                <input type="text" value={settingsForm.company_name || ''} onChange={e => setSettingsForm({...settingsForm, company_name: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white" />
+              </div>
+              <div>
+                <label className="text-zinc-300 font-medium block">Phone Primary</label>
+                <input type="text" value={settingsForm.phone_primary || '+91 99589 56593'} onChange={e => setSettingsForm({...settingsForm, phone_primary: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white font-mono" />
+              </div>
+              <div>
+                <label className="text-zinc-300 font-medium block">WhatsApp Number</label>
+                <input type="text" value={settingsForm.whatsapp_number || '919958956593'} onChange={e => setSettingsForm({...settingsForm, whatsapp_number: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white font-mono" />
+              </div>
+              <div>
+                <label className="text-zinc-300 font-medium block">Primary Email</label>
+                <input type="email" value={settingsForm.email_primary || 'luthratravel455@gmail.com'} onChange={e => setSettingsForm({...settingsForm, email_primary: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white" />
+              </div>
+            </div>
+            <Button type="submit" variant="gold" size="sm" leftIcon={<Save className="w-4 h-4" />}>Save Business Details</Button>
+          </form>
+        )}
 
-      {/* Global Media Library Standalone Modal */}
-      <MediaLibraryModal
-        isOpen={globalMediaModalOpen}
-        onClose={() => setGlobalMediaModalOpen(false)}
-        title="Admin Media Library Manager"
-      />
+        {/* 14. SEO SETTINGS */}
+        {activeTab === 'seo' && (
+          <form onSubmit={handleSaveSettings} className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl space-y-6 text-xs">
+            <h2 className="font-serif text-2xl font-bold text-[#C9A227]">SEO &amp; Meta Settings</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-zinc-300 font-medium block">Default Page Title</label>
+                <input type="text" value={settingsForm.seo_title || 'Luthra Travels | Premium Taxi Services Across India'} onChange={e => setSettingsForm({...settingsForm, seo_title: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white" />
+              </div>
+              <div>
+                <label className="text-zinc-300 font-medium block">Meta Description</label>
+                <textarea rows={3} value={settingsForm.seo_description || 'Book executive taxi rentals across Delhi NCR, Agra, Jaipur, and Chandigarh.'} onChange={e => setSettingsForm({...settingsForm, seo_description: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-white" />
+              </div>
+            </div>
+            <Button type="submit" variant="gold" size="sm" leftIcon={<Save className="w-4 h-4" />}>Save SEO Configuration</Button>
+          </form>
+        )}
+
+        {/* 15. PRICING */}
+        {activeTab === 'pricing' && (
+          <form onSubmit={handleSaveSettings} className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl space-y-6 text-xs">
+            <h2 className="font-serif text-2xl font-bold text-[#C9A227]">Pricing Rules &amp; Per-KM Configuration</h2>
+            <div className="space-y-4 max-w-md">
+              <div>
+                <label className="text-zinc-300 font-medium block">Default Rate Per KM (₹/KM)</label>
+                <input type="number" value={settingsForm.default_rate_per_km || '14'} onChange={e => setSettingsForm({...settingsForm, default_rate_per_km: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-[#C9A227] font-bold font-mono text-lg" />
+              </div>
+            </div>
+            <Button type="submit" variant="gold" size="sm" leftIcon={<Save className="w-4 h-4" />}>Save Pricing Config</Button>
+          </form>
+        )}
+
+        {/* 16. NOTIFICATIONS */}
+        {activeTab === 'notifications' && (
+          <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl space-y-4 text-xs">
+            <h2 className="font-serif text-2xl font-bold text-white">System Activity &amp; Dispatch Logs</h2>
+            <div className="space-y-2 font-mono">
+              <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-800 text-zinc-300 flex justify-between">
+                <span>[LOG] Dispatcher verified active session for {user?.email}</span>
+                <span className="text-emerald-400">ACTIVE</span>
+              </div>
+              <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-800 text-zinc-300 flex justify-between">
+                <span>[LOG] Real-time Supabase Database synced ({bookings.length} reservations logged)</span>
+                <span className="text-[#C9A227]">OK</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 17. USERS & SECURITY */}
+        {activeTab === 'users' && (
+          <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl space-y-4 text-xs">
+            <h2 className="font-serif text-2xl font-bold text-white">Users, Roles &amp; Security Permissions</h2>
+            <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-white">{user?.email || 'admin@luthratravels.com'}</span>
+                <span className="bg-[#C9A227] text-zinc-950 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Super Admin</span>
+              </div>
+              <p className="text-zinc-400">Authenticated via Supabase Auth backend. Password session active.</p>
+            </div>
+          </div>
+        )}
+
+        {/* 18. BACKUP & HEALTH */}
+        {activeTab === 'backup' && (
+          <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl space-y-6 text-xs">
+            <h2 className="font-serif text-2xl font-bold text-[#C9A227]">Database Backup &amp; System Health</h2>
+            <p className="text-zinc-300">Download a full JSON backup of all reservations, fleet specs, routes, blog articles, and settings.</p>
+            <Button variant="gold" size="md" onClick={handleExportFullBackup} leftIcon={<Download className="w-4 h-4" />}>
+              Download Complete JSON Database Backup
+            </Button>
+          </div>
+        )}
+
+      </main>
     </div>
   );
 };
