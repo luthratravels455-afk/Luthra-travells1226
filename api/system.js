@@ -7,12 +7,6 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
 
   try {
-    const action = req.query.action || req.query.type || 'stats';
-
-    if (action === 'health' || action === 'wake') {
-      return res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-    }
-
     const [
       bookingsRes,
       fleetRes,
@@ -33,6 +27,9 @@ export default async function handler(req, res) {
     const totalRevenue = bookings.reduce((sum, b) => sum + (Number(b.estimated_amount) || 0), 0);
 
     return res.status(200).json({
+      status: 'HEALTHY',
+      uptime: process.uptime ? Math.floor(process.uptime()) : 86400,
+      timestamp: new Date().toISOString(),
       totalBookings,
       pendingBookings,
       confirmedBookings,
@@ -43,7 +40,7 @@ export default async function handler(req, res) {
       totalBlogs: (blogsRes.data || []).length
     });
   } catch (err) {
-    console.error('System API error:', err);
+    console.error('System/Stats API error:', err);
     res.status(500).json({ error: err.message });
   }
 }

@@ -37,13 +37,13 @@ export interface SecurityOverviewData {
 
 export const authSecurityService = {
   async getSecurityOverview(email: string = 'admin@luthratravels.com'): Promise<SecurityOverviewData> {
-    const res = await fetch(`/api/security?email=${encodeURIComponent(email)}`);
+    const res = await fetch(`/api/auth?email=${encodeURIComponent(email)}`);
     if (!res.ok) throw new Error('Failed to fetch security data');
     return res.json();
   },
 
   async updateProfile(email: string, updates: Partial<AdminUserProfile>): Promise<AdminUserProfile> {
-    const res = await fetch('/api/security', {
+    const res = await fetch('/api/auth', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'UPDATE_PROFILE', email, updates })
@@ -57,7 +57,7 @@ export const authSecurityService = {
   },
 
   async changePassword(email: string, currentPassword: string, newPassword: string): Promise<void> {
-    const res = await fetch('/api/security', {
+    const res = await fetch('/api/auth', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'CHANGE_PASSWORD', email, currentPassword, newPassword })
@@ -69,7 +69,7 @@ export const authSecurityService = {
   },
 
   async toggle2FA(email: string, is_2fa_enabled: boolean): Promise<boolean> {
-    const res = await fetch('/api/security', {
+    const res = await fetch('/api/auth', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'TOGGLE_2FA', email, is_2fa_enabled })
@@ -80,7 +80,7 @@ export const authSecurityService = {
   },
 
   async revokeOtherSessions(email: string): Promise<void> {
-    const res = await fetch('/api/security', {
+    const res = await fetch('/api/auth', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'REVOKE_OTHER_SESSIONS', email })
@@ -89,7 +89,7 @@ export const authSecurityService = {
   },
 
   async createAdminUser(newAdmin: { name: string; email: string; phone?: string; role?: string }): Promise<AdminUserProfile> {
-    const res = await fetch('/api/security', {
+    const res = await fetch('/api/auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'CREATE_ADMIN', newAdmin })
@@ -103,7 +103,7 @@ export const authSecurityService = {
   },
 
   async deleteAdminUser(id: number): Promise<void> {
-    const res = await fetch(`/api/security?id=${id}`, {
+    const res = await fetch(`/api/auth?id=${id}`, {
       method: 'DELETE'
     });
     if (!res.ok) throw new Error('Failed to delete admin user');

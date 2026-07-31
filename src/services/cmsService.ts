@@ -297,7 +297,7 @@ export const cmsService = {
 
   async getStats(): Promise<AdminStats> {
     return apiFetch<AdminStats>(
-      '/api/stats',
+      '/api/system',
       { method: 'GET' },
       async () => {
         const [bookingsRes, fleetRes, routesRes, blogsRes] = await Promise.all([
