@@ -8,14 +8,14 @@ export default async function handler(req, res) {
 
   try {
     const type = req.query.type || req.query.resource || req.body?.type || 'blogs';
-    const validTables = ['blogs', 'gallery', 'faqs', 'routes', 'services', 'testimonials'];
+    const validTables = ['blogs', 'gallery', 'faqs', 'routes', 'services', 'testimonials', 'fleet'];
 
     if (!validTables.includes(type)) {
       return res.status(400).json({ error: `Invalid content type: ${type}` });
     }
 
     if (req.method === 'GET') {
-      const { slug, id } = req.query || {};
+      const { slug, id, category } = req.query || {};
 
       if (slug && type === 'blogs') {
         const { data, error } = await supabase
@@ -39,7 +39,12 @@ export default async function handler(req, res) {
 
       let query = supabase.from(type).select('*');
 
-      if (type === 'faqs') {
+      if (type === 'fleet') {
+        query = query.order('sorting_order', { ascending: true });
+        if (category && category !== 'ALL') {
+          query = query.eq('category', category);
+        }
+      } else if (type === 'faqs') {
         query = query.order('sorting_order', { ascending: true });
       } else if (type === 'blogs') {
         query = query.order('publish_date', { ascending: false });

@@ -12,6 +12,10 @@
   },
   "rewrites": [
     {
+      "source": "/api/fleet",
+      "destination": "/api/content?type=fleet"
+    },
+    {
       "source": "/api/blogs",
       "destination": "/api/content?type=blogs"
     },
@@ -36,32 +40,32 @@
       "destination": "/api/content?type=testimonials"
     },
     {
-      "source": "/api/contacts",
-      "destination": "/api/admin?type=contacts"
-    },
-    {
       "source": "/api/customers",
-      "destination": "/api/admin?type=customers"
+      "destination": "/api/bookings?resource=customers"
     },
     {
       "source": "/api/drivers",
-      "destination": "/api/admin?type=drivers"
+      "destination": "/api/bookings?resource=drivers"
     },
     {
       "source": "/api/invoices",
-      "destination": "/api/admin?type=invoices"
+      "destination": "/api/bookings?resource=invoices"
     },
     {
       "source": "/api/security",
-      "destination": "/api/admin?type=security"
+      "destination": "/api/auth?action=security"
     },
     {
       "source": "/api/stats",
       "destination": "/api/system?action=stats"
     },
     {
-      "source": "/api/upload",
-      "destination": "/api/media"
+      "source": "/sitemap.xml",
+      "destination": "/api/integration?type=sitemap"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/api/integration?type=robots"
     }
   ]
 }
