@@ -46,7 +46,7 @@ export const LocationPage: React.FC = () => {
       />
 
       <Container size="7xl" className="space-y-12">
-        <Breadcrumb items={[{ label: 'Locations', path: '/location/chandigarh' }, { label: locData.city_name }]} />
+        <Breadcrumb items={[{ label: 'Locations', path: '/location/chandigarh' }, { label: locData.city_name || locData.city || 'City' }]} />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-6 space-y-6">

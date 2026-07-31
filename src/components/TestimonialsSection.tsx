@@ -14,8 +14,12 @@ export const TestimonialsSection: React.FC = () => {
   const { settings } = useCMS();
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [summary, setSummary] = useState<GoogleReviewSummary>({
+    avgRating: 4.9,
+    totalCount: 1284,
+    approvedCount: 0,
+    featuredCount: 0,
     rating: 4.9,
-    totalReviews: '100+',
+    totalReviews: 1284,
     badgeText: 'Google Verified Reviews',
   });
   const [loading, setLoading] = useState(true);
@@ -69,9 +73,9 @@ export const TestimonialsSection: React.FC = () => {
         {/* Google Review Summary Card Required */}
         <div className="max-w-4xl mx-auto">
           <GoogleReviewSummaryCard
-            rating={summary.rating}
-            totalReviews={summary.totalReviews}
-            badgeText={summary.badgeText}
+            rating={summary.rating || 4.9}
+            totalReviews={String(summary.totalReviews || summary.totalCount || '1284+')}
+            badgeText={summary.badgeText || '4.9 Star Rating'}
           />
         </div>
 

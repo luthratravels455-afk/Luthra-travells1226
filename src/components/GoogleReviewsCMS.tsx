@@ -63,7 +63,7 @@ export const GoogleReviewsCMS: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string | number) => {
     if (!window.confirm('Delete this Google Review permanently?')) return;
     try {
       await googleReviewsService.deleteReview(id);
