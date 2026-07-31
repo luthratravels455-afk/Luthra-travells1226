@@ -1,149 +1,217 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { seoService, PageSEORecord } from '../../services/seoService';
+import { useCMS } from '../../contexts/CMSContext';
 
 export interface PageSEOProps {
-  title: string;
+  title?: string;
   description?: string;
   canonicalUrl?: string;
+  pagePath?: string;
   ogImage?: string;
-  schemaType?: 'LocalBusiness' | 'TaxiService' | 'FAQPage' | 'Article';
+  schemaType?: 'LocalBusiness' | 'FAQPage' | 'BlogPosting' | 'BreadcrumbList' | 'Organization';
+  faqItems?: Array<{ question: string; answer: string }>;
+  blogData?: { title: string; excerpt: string; date: string; author: string; image: string };
 }
 
 export const PageSEO: React.FC<PageSEOProps> = ({
   title,
-  description = 'Luthra Travels - Premier Executive Chauffeur Mobility & Taxi Fleet Rentals in Delhi NCR, Airport Transfers, Outstation Trips & Local Taxis.',
+  description,
   canonicalUrl,
-  ogImage = 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=1200&auto=format&fit=crop',
+  pagePath,
+  ogImage,
   schemaType = 'LocalBusiness',
+  faqItems,
+  blogData,
 }) => {
+  const { settings } = useCMS();
+  const [seoRecord, setSeoRecord] = useState<PageSEORecord | null>(null);
+
+  const currentPath = pagePath || window.location.pathname;
+
   useEffect(() => {
-    const fullTitle = `${title} | Luthra Travels`;
+    let isMounted = true;
+    const loadSEO = async () => {
+      const dbSeo = await seoService.getPageSEO(currentPath);
+      if (isMounted && dbSeo) {
+        setSeoRecord(dbSeo);
+      }
+    };
+    loadSEO();
+    return () => { isMounted = false; };
+  }, [currentPath]);
+
+  useEffect(() => {
+    // Resolve Title
+    const baseTitle = seoRecord?.meta_title || title || 'Premium Taxi Services Across India';
+    const fullTitle = baseTitle.includes('Luthra Travels') ? baseTitle : `${baseTitle} | Luthra Travels`;
     document.title = fullTitle;
 
-    // Meta Description
-    let metaDesc = document.querySelector('meta[name="description"]');
-    if (!metaDesc) {
-      metaDesc = document.createElement('meta');
-      metaDesc.setAttribute('name', 'description');
-      document.head.appendChild(metaDesc);
-    }
-    metaDesc.setAttribute('content', description);
-
-    // OpenGraph Meta
-    const ogTags = [
-      { property: 'og:title', content: fullTitle },
-      { property: 'og:description', content: description },
-      { property: 'og:image', content: ogImage },
-      { property: 'og:type', content: 'website' },
-      { property: 'og:site_name', content: 'Luthra Travels' },
-      { property: 'twitter:card', content: 'summary_large_image' },
-      { property: 'twitter:title', content: fullTitle },
-      { property: 'twitter:description', content: description },
-      { property: 'twitter:image', content: ogImage },
-    ];
-
-    ogTags.forEach((tag) => {
-      let el = document.querySelector(`meta[property="${tag.property}"]`);
+    // Helper for Meta Tags
+    const updateMetaTag = (attribute: string, key: string, content: string) => {
+      if (!content) return;
+      let el = document.querySelector(`meta[${attribute}="${key}"]`);
       if (!el) {
         el = document.createElement('meta');
-        el.setAttribute('property', tag.property);
+        el.setAttribute(attribute, key);
         document.head.appendChild(el);
       }
-      el.setAttribute('content', tag.content);
-    });
-
-    // Canonical
-    const currentUrl = canonicalUrl || window.location.href;
-    let canonical = document.querySelector('link[rel="canonical"]');
-    if (!canonical) {
-      canonical = document.createElement('link');
-      canonical.setAttribute('rel', 'canonical');
-      document.head.appendChild(canonical);
-    }
-    canonical.setAttribute('href', currentUrl);
-
-    // Inject JSON-LD LocalBusiness & TaxiService Schema
-    const schemaId = 'luthra-jsonld-schema';
-    let scriptEl = document.getElementById(schemaId) as HTMLScriptElement | null;
-    if (!scriptEl) {
-      scriptEl = document.createElement('script');
-      scriptEl.id = schemaId;
-      scriptEl.type = 'application/ld+json';
-      document.head.appendChild(scriptEl);
-    }
-
-    const structuredData = {
-      '@context': 'https://schema.org',
-      '@type': 'TaxiService',
-      name: 'Luthra Travels',
-      description: 'Executive Chauffeur Taxi Rentals, Airport Transfers, Outstation Trips, Local Taxis, and Corporate Mobility across Delhi NCR and North India.',
-      url: 'https://luthratravels.com',
-      telephone: '+91 99589 56593',
-      email: 'luthratravel455@gmail.com',
-      address: {
-        '@type': 'PostalAddress',
-        streetAddress: 'Suite 402, Signature Towers, South City 1',
-        addressLocality: 'Gurgaon',
-        addressRegion: 'Delhi NCR',
-        postalCode: '122001',
-        addressCountry: 'IN',
-      },
-      geo: {
-        '@type': 'GeoCoordinates',
-        latitude: '28.4595',
-        longitude: '77.0266',
-      },
-      openingHoursSpecification: {
-        '@type': 'OpeningHoursSpecification',
-        dayOfWeek: [
-          'Monday',
-          'Tuesday',
-          'Wednesday',
-          'Thursday',
-          'Friday',
-          'Saturday',
-          'Sunday',
-        ],
-        opens: '00:00',
-        closes: '23:59',
-      },
-      areaServed: [
-        'Delhi',
-        'Gurgaon',
-        'Noida',
-        'Faridabad',
-        'Ghaziabad',
-        'Agra',
-        'Jaipur',
-        'Chandigarh',
-        'Dehradun',
-        'Shimla',
-      ],
-      hasOfferCatalog: {
-        '@type': 'OfferCatalog',
-        name: 'Taxi Services',
-        itemListElement: [
-          {
-            '@type': 'Offer',
-            itemOffered: {
-              '@type': 'Service',
-              name: 'Airport Transfer IGI T1/T2/T3',
-              description: '24/7 Punctual airport transfers with flight radar tracking.',
-            },
-          },
-          {
-            '@type': 'Offer',
-            itemOffered: {
-              '@type': 'Service',
-              name: 'Outstation Taxi',
-              description: 'Intercity flat rate taxi rentals to Agra, Jaipur, Chandigarh, Shimla.',
-            },
-          },
-        ],
-      },
+      el.setAttribute('content', content);
     };
 
-    scriptEl.textContent = JSON.stringify(structuredData);
-  }, [title, description, canonicalUrl, ogImage, schemaType]);
+    // Helper for Link Tags
+    const updateLinkTag = (rel: string, href: string) => {
+      if (!href) return;
+      let el = document.querySelector(`link[rel="${rel}"]`);
+      if (!el) {
+        el = document.createElement('link');
+        el.setAttribute('rel', rel);
+        document.head.appendChild(el);
+      }
+      el.setAttribute('href', href);
+    };
+
+    // Resolve Values
+    const resolvedDesc = seoRecord?.meta_description || description || settings.company_tagline || 'Experience safe, comfortable and reliable taxi services with professional drivers and transparent pricing.';
+    const resolvedCanonical = seoRecord?.canonical_url || canonicalUrl || `https://luthratravels.com${currentPath}`;
+    const resolvedRobots = seoRecord?.robots_meta || 'index, follow';
+    const resolvedOgTitle = seoRecord?.og_title || fullTitle;
+    const resolvedOgDesc = seoRecord?.og_description || resolvedDesc;
+    const resolvedOgImage = seoRecord?.og_image || ogImage || 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?q=80&w=1200&auto=format&fit=crop';
+    const resolvedOgType = seoRecord?.og_type || 'website';
+    const resolvedTwitterCard = seoRecord?.twitter_card || 'summary_large_image';
+
+    // Standard Meta
+    updateMetaTag('name', 'description', resolvedDesc);
+    updateMetaTag('name', 'robots', resolvedRobots);
+    updateLinkTag('canonical', resolvedCanonical);
+
+    // Open Graph
+    updateMetaTag('property', 'og:title', resolvedOgTitle);
+    updateMetaTag('property', 'og:description', resolvedOgDesc);
+    updateMetaTag('property', 'og:image', resolvedOgImage);
+    updateMetaTag('property', 'og:type', resolvedOgType);
+    updateMetaTag('property', 'og:site_name', 'Luthra Travels');
+    updateMetaTag('property', 'og:url', resolvedCanonical);
+
+    // Twitter Card
+    updateMetaTag('name', 'twitter:card', resolvedTwitterCard);
+    updateMetaTag('name', 'twitter:title', resolvedOgTitle);
+    updateMetaTag('name', 'twitter:description', resolvedOgDesc);
+    updateMetaTag('name', 'twitter:image', resolvedOgImage);
+
+    // JSON-LD Structured Data Schema Generation
+    const activeSchemaType = seoRecord?.schema_type || schemaType;
+    let schemaObj: any = null;
+
+    if (seoRecord?.custom_json_ld) {
+      try {
+        schemaObj = JSON.parse(seoRecord.custom_json_ld);
+      } catch {
+        // Fallback if custom JSON-LD fails to parse
+      }
+    }
+
+    if (!schemaObj) {
+      if (activeSchemaType === 'LocalBusiness' || activeSchemaType === 'Organization') {
+        schemaObj = {
+          '@context': 'https://schema.org',
+          '@type': 'TaxiService',
+          'name': 'Luthra Travels',
+          'url': 'https://luthratravels.com',
+          'logo': 'https://luthratravels.com/favicon.svg',
+          'image': resolvedOgImage,
+          'telephone': settings.phone_primary || '+91 99589 56593',
+          'email': settings.email_primary || 'luthratravel455@gmail.com',
+          'address': {
+            '@type': 'PostalAddress',
+            'streetAddress': 'Suite 402, Signature Towers, South City 1',
+            'addressLocality': 'Gurgaon',
+            'addressRegion': 'Haryana / Delhi NCR',
+            'postalCode': '122001',
+            'addressCountry': 'IN'
+          },
+          'geo': {
+            '@type': 'GeoCoordinates',
+            'latitude': '28.4595',
+            'longitude': '77.0266'
+          },
+          'priceRange': '₹₹',
+          'openingHoursSpecification': {
+            '@type': 'OpeningHoursSpecification',
+            'dayOfWeek': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+            'opens': '00:00',
+            'closes': '23:59'
+          },
+          'areaServed': ['Delhi', 'Gurgaon', 'Noida', 'Agra', 'Jaipur', 'Chandigarh']
+        };
+      } else if (activeSchemaType === 'FAQPage' && faqItems && faqItems.length > 0) {
+        schemaObj = {
+          '@context': 'https://schema.org',
+          '@type': 'FAQPage',
+          'mainEntity': faqItems.map(item => ({
+            '@type': 'Question',
+            'name': item.question,
+            'acceptedAnswer': {
+              '@type': 'Answer',
+              'text': item.answer
+            }
+          }))
+        };
+      } else if (activeSchemaType === 'BlogPosting' && blogData) {
+        schemaObj = {
+          '@context': 'https://schema.org',
+          '@type': 'BlogPosting',
+          'headline': blogData.title,
+          'description': blogData.excerpt,
+          'image': blogData.image,
+          'author': {
+            '@type': 'Person',
+            'name': blogData.author
+          },
+          'publisher': {
+            '@type': 'Organization',
+            'name': 'Luthra Travels',
+            'logo': {
+              '@type': 'ImageObject',
+              'url': 'https://luthratravels.com/favicon.svg'
+            }
+          },
+          'datePublished': blogData.date
+        };
+      } else {
+        // BreadcrumbList Schema default
+        schemaObj = {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          'itemListElement': [
+            {
+              '@type': 'ListItem',
+              'position': 1,
+              'name': 'Home',
+              'item': 'https://luthratravels.com/'
+            },
+            {
+              '@type': 'ListItem',
+              'position': 2,
+              'name': fullTitle,
+              'item': resolvedCanonical
+            }
+          ]
+        };
+      }
+    }
+
+    // Inject JSON-LD script
+    let scriptEl = document.querySelector('script[type="application/ld+json"]#seo-schema');
+    if (!scriptEl) {
+      scriptEl = document.createElement('script');
+      scriptEl.setAttribute('type', 'application/ld+json');
+      scriptEl.setAttribute('id', 'seo-schema');
+      document.head.appendChild(scriptEl);
+    }
+    scriptEl.textContent = JSON.stringify(schemaObj, null, 2);
+
+  }, [seoRecord, title, description, canonicalUrl, currentPath, ogImage, schemaType, faqItems, blogData, settings]);
 
   return null;
 };

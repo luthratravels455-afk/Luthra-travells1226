@@ -120,7 +120,7 @@ export const Navbar: React.FC = () => {
                 LUTHRA <span className="text-[#C9A227] font-light">TRAVELS</span>
               </span>
               <span className="text-[10px] tracking-widest text-zinc-400 uppercase font-mono block">
-                Luxury Chauffeur Mobility
+                Premium Chauffeur Services
               </span>
             </div>
           </Link>

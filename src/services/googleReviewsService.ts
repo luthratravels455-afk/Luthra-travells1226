@@ -1,48 +1,74 @@
-import { Testimonial } from '../types';
+export interface GoogleReview {
+  id: number;
+  author_name: string;
+  author_photo_url: string;
+  rating: number;
+  relative_time_description: string;
+  text: string;
+  is_approved: boolean;
+  is_featured: boolean;
+  source: string;
+  created_at?: string;
+}
 
-/**
- * Google Reviews Service Abstraction Layer
- * Ready for future Google Places API (Place Details / Reviews) integration.
- */
 export interface GoogleReviewSummary {
   rating: number;
   totalReviews: string;
   badgeText: string;
-  placeId?: string;
+}
+
+export interface GoogleReviewsResponse {
+  reviews: GoogleReview[];
+  stats: {
+    avgRating: number;
+    totalCount: number;
+    approvedCount: number;
+    featuredCount: number;
+  };
 }
 
 export const googleReviewsService = {
-  /**
-   * Fetches Google Places summary stats.
-   * Currently returns CMS settings or fallback defaults.
-   */
-  async getSummaryStats(): Promise<GoogleReviewSummary> {
-    try {
-      const res = await fetch('/api/settings');
-      if (res.ok) {
-        const data = await res.json();
-        return {
-          rating: parseFloat(data.google_rating) || 4.9,
-          totalReviews: data.google_review_count || '100+',
-          badgeText: data.google_badge_text || 'Google Verified Reviews',
-        };
-      }
-    } catch {
-      // Fallback
-    }
-    return {
-      rating: 4.9,
-      totalReviews: '100+',
-      badgeText: 'Google Verified Reviews',
-    };
+  async getReviews(all = false): Promise<GoogleReviewsResponse> {
+    const res = await fetch(`/api/google-reviews${all ? '?all=true' : ''}`);
+    if (!res.ok) throw new Error('Failed to fetch Google Reviews');
+    return res.json();
   },
 
-  /**
-   * Placeholder for future live Google Places API sync.
-   * Can be hooked up to `https://maps.googleapis.com/maps/api/place/details/json` via serverless API route.
-   */
-  async syncLiveGoogleReviews(placeId: string): Promise<Testimonial[]> {
-    console.log('[googleReviewsService] Abstract sync triggered for placeId:', placeId);
-    return [];
+  async getSummaryStats(): Promise<GoogleReviewSummary> {
+    try {
+      const data = await this.getReviews(false);
+      return {
+        rating: data.stats?.avgRating || 4.9,
+        totalReviews: `${data.stats?.totalCount || 1284}+`,
+        badgeText: 'Google Verified Reviews',
+      };
+    } catch {
+      return {
+        rating: 4.9,
+        totalReviews: '1,284+',
+        badgeText: 'Google Verified Reviews',
+      };
+    }
   },
+
+  async syncReviews(): Promise<{ message: string; review: GoogleReview }> {
+    const res = await fetch('/api/google-reviews', { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to auto-sync Google Reviews');
+    return res.json();
+  },
+
+  async updateReview(id: number, updates: Partial<GoogleReview>): Promise<GoogleReview> {
+    const res = await fetch('/api/google-reviews', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ...updates })
+    });
+    if (!res.ok) throw new Error('Failed to update review status');
+    return res.json();
+  },
+
+  async deleteReview(id: number): Promise<void> {
+    const res = await fetch(`/api/google-reviews?id=${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete review');
+  }
 };

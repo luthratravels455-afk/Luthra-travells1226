@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { CheckCircle, Phone, Calendar, ShieldCheck, Sparkles } from 'lucide-react';
+import { CheckCircle, Phone, Sparkles } from 'lucide-react';
 import { seoService, LandingPageItem } from '../services/seoService';
-import { SEOHead } from '../components/seo/SEOHead';
-import { SchemaMarkup } from '../components/seo/SchemaMarkup';
+import { PageSEO } from '../components/ui/SEO';
 import { BookingForm } from '../components/BookingForm';
 import { Container } from '../components/ui/Container';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
@@ -41,16 +40,13 @@ export const LandingPage: React.FC = () => {
 
   return (
     <div className="bg-zinc-950 text-white min-h-screen pt-32 pb-24">
-      <SEOHead
+      <PageSEO
         title={page.title}
-        description={page.meta_desc}
-        focusKeyword={`${page.category}, ${page.slug}`}
+        description={page.meta_description}
       />
-      <SchemaMarkup type="TaxiService" />
-      <SchemaMarkup type="LocalBusiness" />
 
       <Container size="7xl" className="space-y-12">
-        <Breadcrumb items={[{ label: 'Services', path: '/fleet' }, { label: page.category }]} />
+        <Breadcrumb items={[{ label: 'Services', path: '/fleet' }, { label: page.title }]} />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-6 space-y-6">
@@ -59,17 +55,17 @@ export const LandingPage: React.FC = () => {
             </div>
 
             <h1 className="font-serif text-4xl sm:text-5xl font-extrabold text-white leading-tight">
-              {page.h1_heading}
+              {page.h1_title || page.title}
             </h1>
 
             <p className="text-zinc-300 text-sm sm:text-base leading-relaxed">
-              {page.meta_desc}
+              {page.meta_description}
             </p>
 
             <div className="p-6 bg-zinc-900 rounded-2xl border border-zinc-800 space-y-3">
               <h3 className="font-serif font-bold text-white text-base">Key Service Features:</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs text-zinc-300">
-                {page.features.map((feat, idx) => (
+                {(page.features || []).map((feat: string, idx: number) => (
                   <div key={idx} className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-[#C9A227] shrink-0" />
                     <span>{feat}</span>

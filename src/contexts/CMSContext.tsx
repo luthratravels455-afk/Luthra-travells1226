@@ -16,7 +16,7 @@ const defaultSettings: SiteSettings = {
   whatsapp_number: '919810012345',
   email_primary: 'reservations@luthratravels.com',
   address: 'Suite 402, Signature Towers, South City 1, Gurgaon, Delhi NCR - 122001',
-  hero_title: 'Luxury Chauffeur Mobility, Crafted for Perfection',
+  hero_title: 'Premium Chauffeur Services',
   hero_subtitle: 'Experience India\'s finest fleet of luxury sedans, MPVs, and executive SUVs for Airport Transfers, Outstation Trips & Corporate Mobility.',
   currency: '₹',
   years_in_business: '14',

@@ -3,7 +3,7 @@ import { Phone, Calendar, ShieldCheck, Sparkles, Clock, Award } from 'lucide-rea
 import { BookingForm } from '../components/BookingForm';
 import { FleetShowcase } from '../components/FleetShowcase';
 import { WhyChooseUs } from '../components/WhyChooseUs';
-import { TestimonialsSection } from '../components/TestimonialsSection';
+import { GoogleReviewsWidget } from '../components/GoogleReviewsWidget';
 import { Button } from '../components/ui/Button';
 import { Container } from '../components/ui/Container';
 import { PageSEO } from '../components/ui/SEO';
@@ -32,7 +32,7 @@ export const Home: React.FC = () => {
   return (
     <div className="bg-zinc-950 text-white min-h-screen">
       <PageSEO
-        title="Premium Taxi Services Across India"
+        title="Premium Chauffeur Services Across India"
         description="Book executive chauffeur rentals, airport transfers, outstation trips, local taxis, and corporate mobility across Delhi NCR, Agra, Jaipur & Chandigarh."
       />
 
@@ -58,7 +58,7 @@ export const Home: React.FC = () => {
 
               {/* Main Heading Required */}
               <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.12]">
-                Premium Taxi Services <br className="hidden sm:block" />
+                Premium Chauffeur Services <br className="hidden sm:block" />
                 <span className="text-[#C9A227]">Across India</span>
               </h1>
 
@@ -128,8 +128,8 @@ export const Home: React.FC = () => {
       {/* WHY CHOOSE US SECTION */}
       <WhyChooseUs />
 
-      {/* TESTIMONIALS & REVIEWS MODULE */}
-      <TestimonialsSection />
+      {/* GOOGLE REVIEWS TRUST WIDGET */}
+      <GoogleReviewsWidget />
     </div>
   );
 };

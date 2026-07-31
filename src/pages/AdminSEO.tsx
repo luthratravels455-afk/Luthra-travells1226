@@ -1,17 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container } from '../components/ui/Container';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../contexts/ToastContext';
 import { seoService } from '../services/seoService';
-import { Search, Globe, FileText, MapPin, Repeat, Database, RefreshCw, Copy, Check } from 'lucide-react';
+import { Copy, FileText, Code } from 'lucide-react';
 
 export const AdminSEO: React.FC = () => {
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'sitemap' | 'robots' | 'schema' | 'tracking'>('sitemap');
   const [copied, setTouchedCopied] = useState(false);
+  const [sitemapXml, setSitemapXml] = useState<string>('Loading sitemap...');
+  const [robotsTxt, setRobotsTxt] = useState<string>('Loading robots.txt...');
 
-  const sitemapXml = seoService.generateSitemapXml();
-  const robotsTxt = seoService.generateRobotsTxt();
+  useEffect(() => {
+    const loadCode = async () => {
+      try {
+        const sm = await seoService.generateSitemapXml();
+        const rb = await seoService.generateRobotsTxt();
+        setSitemapXml(sm);
+        setRobotsTxt(rb);
+      } catch (err) {
+        console.error('Error generating SEO code:', err);
+      }
+    };
+    loadCode();
+  }, []);
 
   const handleCopySitemap = () => {
     navigator.clipboard.writeText(sitemapXml);
@@ -55,7 +68,9 @@ export const AdminSEO: React.FC = () => {
 
         {activeTab === 'sitemap' && (
           <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-4">
-            <h3 className="font-serif font-bold text-white text-lg">Generated XML Sitemap (Automatic)</h3>
+            <h3 className="font-serif font-bold text-white text-lg flex items-center gap-2">
+              <FileText className="w-5 h-5 text-[#C9A227]" /> Generated XML Sitemap (Automatic)
+            </h3>
             <textarea
               readOnly
               rows={12}
@@ -67,7 +82,9 @@ export const AdminSEO: React.FC = () => {
 
         {activeTab === 'robots' && (
           <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-4">
-            <h3 className="font-serif font-bold text-white text-lg">Generated robots.txt</h3>
+            <h3 className="font-serif font-bold text-white text-lg flex items-center gap-2">
+              <Code className="w-5 h-5 text-[#C9A227]" /> Generated robots.txt
+            </h3>
             <textarea
               readOnly
               rows={8}

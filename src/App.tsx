@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { CMSProvider } from './contexts/CMSContext';
@@ -7,6 +7,8 @@ import { CMSProvider } from './contexts/CMSContext';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { AnalyticsInjector } from './components/AnalyticsInjector';
+import { CustomScriptsInjector } from './components/CustomScriptsInjector';
 
 import { Home } from './pages/Home';
 import { Fleet } from './pages/Fleet';
@@ -33,6 +35,8 @@ export function App() {
       <AuthProvider>
         <CMSProvider>
           <ToastProvider>
+            <AnalyticsInjector />
+            <CustomScriptsInjector />
             <div className="min-h-screen bg-[#09090b] text-white flex flex-col justify-between selection:bg-[#C9A227] selection:text-zinc-950">
               <Navbar />
               <main className="flex-1">
